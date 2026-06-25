@@ -15,7 +15,9 @@
                             blue: '#0A2947',
                             gold: '#FFD700',
                             goldDark: '#CCAC00',
-                            dark: '#2B0000'
+                            dark: '#2B0000',
+                            light: '#E8F0FE',
+                            accent: '#1A5276',
                         }
                     }
                 }
@@ -23,81 +25,68 @@
         }
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+        * {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
         ::-webkit-scrollbar {
             width: 6px;
+            height: 6px;
         }
-
         ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #0A2947;
+            background: #f1f5f9;
             border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
         }
 
         .nav-link {
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             outline: none !important;
             box-shadow: none !important;
             border: none !important;
+            position: relative;
+        }
+        .nav-link:hover {
+            transform: translateX(4px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .nav-link.active {
+            background: linear-gradient(135deg, #0A2947 0%, #1A5276 100%);
+            color: #FFD700;
+            box-shadow: 0 4px 12px rgba(10, 41, 71, 0.3);
+            font-weight: 700;
         }
 
-        /* Prevent text selection on buttons */
         button {
             user-select: none;
-        }
-
-        /* Override Tailwind forms plugin */
-        [type='button']:focus,
-        [type='submit']:focus,
-        button:focus {
-            outline: none !important;
-            box-shadow: none !important;
-            --tw-ring-shadow: none !important;
-            --tw-ring-offset-shadow: none !important;
-            border-color: transparent !important;
-        }
-
-        /* Remove outline/border on click */
-        .nav-link:focus,
-        .nav-link:focus-visible,
-        .nav-link:active,
-        button:focus,
-        button:focus-visible,
-        button:active {
-            outline: none !important;
-            box-shadow: none !important;
-            border: none !important;
-            --tw-ring-shadow: none !important;
-            --tw-ring-offset-shadow: none !important;
-        }
-
-        /* For sidebar and mobile menu buttons */
-        aside button,
-        aside button:focus,
-        aside button:focus-visible,
-        aside button:active,
-        aside button:hover,
-        nav button,
-        nav button:focus,
-        nav button:focus-visible,
-        nav button:active,
-        nav button:hover {
-            outline: none !important;
-            box-shadow: none !important;
-            border: none !important;
-            --tw-ring-shadow: none !important;
-            --tw-ring-offset-shadow: none !important;
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Global focus removal */
+        button:focus,
+        button:focus-visible,
+        button:active,
+        .nav-link:focus,
+        .nav-link:focus-visible,
+        .nav-link:active {
+            outline: none !important;
+            box-shadow: none !important;
+            border: none !important;
+            --tw-ring-shadow: none !important;
+            --tw-ring-offset-shadow: none !important;
+        }
         *:focus {
             outline: none !important;
         }
-
         *:focus-visible {
             outline: none !important;
             box-shadow: none !important;
@@ -105,136 +94,256 @@
             --tw-ring-offset-shadow: none !important;
         }
 
-        /* Remove Tailwind ring effect */
-        .nav-link {
-            --tw-ring-shadow: none !important;
-            --tw-ring-offset-shadow: none !important;
+        #dashboard {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+        }
+        #dashboard aside {
+            overflow-y: auto;
+            height: 100vh;
+        }
+        #dashboard main {
+            overflow-y: auto;
+            height: 100vh;
         }
 
-        button:focus-visible {
-            --tw-ring-shadow: none !important;
-            --tw-ring-offset-shadow: none !important;
+        .card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
         }
 
-        /* Remove any border on active state */
-        .nav-link:active,
-        button:active {
-            border-color: transparent !important;
-            outline: none !important;
-            box-shadow: none !important;
+        .btn-primary {
+            background: linear-gradient(135deg, #0A2947 0%, #2B0000 100%);
+            transition: all 0.3s ease;
+            color: #FFD700;
+            font-weight: 700;
+            border-radius: 12px;
+            padding: 10px 20px;
+            box-shadow: 0 4px 12px rgba(10, 41, 71, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(10, 41, 71, 0.4);
+        }
+        .btn-secondary {
+            transition: all 0.3s ease;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-weight: 600;
+        }
+        .btn-secondary:hover {
+            transform: translateY(-1px);
+            border-color: #0A2947;
+            background: #f8fafc;
         }
 
-        /* Override all focus states */
-        .nav-link:focus-visible {
-            outline: 2px solid transparent !important;
-            outline-offset: 2px !important;
+        input:focus, select:focus, textarea:focus {
+            border-color: #0A2947 !important;
+            box-shadow: 0 0 0 3px rgba(10, 41, 71, 0.1) !important;
         }
 
-        button:focus-visible {
-            outline: 2px solid transparent !important;
-            outline-offset: 2px !important;
+        .table-row {
+            transition: all 0.15s ease;
+        }
+        .table-row:hover {
+            background-color: #f8fafc;
         }
 
-        /* Mobile menu transitions */
+        .modal-enter {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .badge-success {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            color: #065f46;
+        }
+        .badge-danger {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            color: #991b1b;
+        }
+        .badge-warning {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            color: #92400e;
+        }
+        .badge-info {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1e40af;
+        }
+
+        .sidebar-gradient {
+            background: linear-gradient(180deg, #2B0000 0%, #0A2947 100%);
+        }
+
+        .bg-pattern {
+            background-color: transparent;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            background-repeat: repeat;
+        }
+
         #mobile-menu {
             transition: opacity 0.3s ease-in-out;
+            backdrop-filter: blur(4px);
+        }
+        #menu-panel {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
         }
 
-        #menu-panel {
-            transition: transform 0.3s ease-in-out;
+        @media (max-width: 768px) {
+            .responsive-table {
+                font-size: 0.75rem;
+            }
+            .responsive-table th,
+            .responsive-table td {
+                padding: 0.5rem 0.75rem;
+            }
+        }
+
+        .payment-method-btn {
+            transition: all 0.2s ease;
+        }
+        .payment-method-btn.selected {
+            border-color: #0A2947 !important;
+            background: #E8F0FE !important;
+            box-shadow: 0 0 0 3px rgba(10, 41, 71, 0.1);
         }
     </style>
 </head>
 
-<body class="bg-stone-50 font-sans text-stone-800 relative">
+<body class="bg-gray-50 font-sans text-gray-800 relative antialiased">
 
     <!-- Global Loading Overlay -->
     <div id="global-loading"
-        class="fixed inset-0 bg-stone-900/80 hidden flex flex-col items-center justify-center z-[100] backdrop-blur-sm">
-        <div class="animate-spin rounded-full h-16 w-16 sm:h-20 sm:w-20 border-4 border-stone-300 border-t-tsu-gold">
+        class="fixed inset-0 bg-gray-900/90 backdrop-blur-sm hidden flex flex-col items-center justify-center z-[200]">
+        <div class="relative">
+            <div class="animate-spin rounded-full h-20 w-20 border-4 border-gray-500 border-t-tsu-gold"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <i class="fa-solid fa-building-columns text-tsu-gold text-lg"></i>
+            </div>
         </div>
-        <p id="loading-text" class="text-white font-bold tracking-wider mt-4 sm:mt-5 text-xs sm:text-sm uppercase">
-            Loading...</p>
+        <p id="loading-text" class="text-white font-semibold tracking-wider mt-5 text-sm uppercase">Loading...</p>
+        <p class="text-gray-400 text-xs mt-2">Please wait while we load your dashboard</p>
     </div>
 
     <!-- Auth Screen -->
     <div id="auth-screen"
-        class="min-h-screen flex items-center justify-center bg-gradient-to-tr from-tsu-dark via-tsu-blue to-tsu-dark px-4 py-8">
+        class="min-h-screen flex items-center justify-center bg-gradient-to-br from-tsu-dark via-tsu-blue to-tsu-dark px-4 py-8 relative overflow-hidden">
+        
+        <div class="absolute inset-0 bg-pattern opacity-30"></div>
+        
         <!-- Login Panel -->
-        <div id="login-panel"
-            class="bg-white/95 p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full border border-tsu-gold/20">
-            <div class="text-center mb-6">
-                <div class="inline-flex p-3 bg-red-50 text-tsu-blue rounded-full mb-3">
-                    <i class="fa-solid fa-building-shield text-2xl sm:text-3xl"></i>
+        <div id="login-panel" class="bg-white/98 rounded-3xl shadow-2xl max-w-md w-full p-8 border border-gray-200 relative z-10 backdrop-blur-sm">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-tsu-blue to-tsu-dark rounded-2xl mb-4 shadow-lg">
+                    <i class="fa-solid fa-building-columns text-tsu-gold text-2xl"></i>
                 </div>
-                <h2 class="text-xl sm:text-2xl font-black text-tsu-blue tracking-tight">Civic Portal</h2>
-                <p class="text-stone-500 text-xs sm:text-sm mt-1">Sign in to your community resident account</p>
+                <h2 class="text-2xl font-extrabold text-tsu-light tracking-tight">Civic Portal</h2>
+                <p class="text-gray-400 text-sm mt-2 font-medium">Resident Access Hub</p>
+                <div class="flex items-center justify-center mt-4">
+                    <div class="h-px w-8 bg-gray-300"></div>
+                    <span class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sign In</span>
+                    <div class="h-px w-8 bg-gray-300"></div>
+                </div>
             </div>
-            <form id="login-form" class="space-y-4">
+            <form id="login-form" class="space-y-5">
                 <div>
-                    <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Email Address</label>
-                    <input type="email" id="login-email" required
-                        class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm"
-                        placeholder="resident@domain.com">
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">Email Address</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                            <i class="fa-solid fa-envelope"></i>
+                        </span>
+                        <input type="email" id="login-email" required
+                            class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 text-sm transition-all"
+                            placeholder="resident@domain.com">
+                    </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Password</label>
-                    <input type="password" id="login-password" required
-                        class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm"
-                        placeholder="••••••••">
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="login-password" required
+                            class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 text-sm transition-all"
+                            placeholder="••••••••">
+                    </div>
                 </div>
                 <button type="submit"
-                    class="w-full bg-tsu-blue hover:bg-tsu-dark text-tsu-gold font-bold py-3 px-4 rounded-xl shadow-lg transition-all text-sm uppercase tracking-wider mt-2 border border-tsu-gold/40">
-                    Login
+                    class="w-full btn-primary font-bold py-3.5 rounded-xl text-sm uppercase tracking-wider shadow-xl flex items-center justify-center space-x-2 border border-tsu-light/30">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Access Portal</span>
                 </button>
             </form>
-            <div class="text-center mt-6 pt-4 border-t border-stone-100">
-                <p class="text-xs sm:text-sm text-stone-600">New resident? <button onclick="toggleAuthPanels(true)"
-                        class="text-tsu-blue font-bold hover:underline">Create Account</button></p>
+            <div class="mt-6 text-center pt-4 border-t border-gray-100">
+                <p class="text-sm text-gray-300">New resident? 
+                    <button onclick="toggleAuthPanels(true)" class="text-tsu-accent font-bold hover:underline transition-all">
+                        Create Account
+                    </button>
+                </p>
             </div>
         </div>
 
         <!-- Register Panel -->
-        <div id="register-panel"
-            class="bg-white/95 p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full border border-tsu-gold/20 hidden">
+        <div id="register-panel" class="bg-white/98 rounded-3xl shadow-2xl max-w-md w-full p-8 border border-gray-200 relative z-10 backdrop-blur-sm hidden">
             <div class="text-center mb-6">
-                <div class="inline-flex p-3 bg-amber-50 text-tsu-goldDark rounded-full mb-3">
-                    <i class="fa-solid fa-user-plus text-2xl sm:text-3xl"></i>
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-tsu-gold to-tsu-goldDark rounded-2xl mb-4 shadow-lg">
+                    <i class="fa-solid fa-user-plus text-tsu-dark text-2xl"></i>
                 </div>
-                <h2 class="text-xl sm:text-2xl font-black text-tsu-blue tracking-tight">Create Account</h2>
-                <p class="text-stone-500 text-xs sm:text-sm mt-1">Register for the official Resident Hub</p>
+                <h2 class="text-2xl font-extrabold text-tsu-light tracking-tight">Create Account</h2>
+                <p class="text-gray-400 text-sm mt-2 font-medium">Join the Resident Hub</p>
             </div>
-            <form id="register-form" class="space-y-3">
+            <form id="register-form" class="space-y-4 max-h-[55vh] overflow-y-auto pr-2">
                 <div>
-                    <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Full Name</label>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">Full Name</label>
                     <input type="text" id="reg-name" required
-                        class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm"
+                        class="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 transition-all"
                         placeholder="Juan Dela Cruz">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Email Address</label>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">Email</label>
                     <input type="email" id="reg-email" required
-                        class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm"
+                        class="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 transition-all"
                         placeholder="juan@email.com">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Contact
-                        Number</label>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">Phone</label>
                     <input type="tel" id="reg-phone" required
-                        class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm"
+                        class="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 transition-all"
                         placeholder="09123456789">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Age</label>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">Age</label>
                         <input type="number" id="reg-age" required min="15" max="120"
-                            class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm"
+                            class="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 transition-all"
                             placeholder="25">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Gender</label>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">Gender</label>
                         <select id="reg-gender" required
-                            class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm">
+                            class="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 transition-all">
                             <option value="">Select</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -243,256 +352,224 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Address</label>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">Address</label>
                     <input type="text" id="reg-address" required
-                        class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm"
+                        class="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 transition-all"
                         placeholder="Barangay, City, Province">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Password</label>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">Password</label>
                     <input type="password" id="reg-password" required minlength="6"
-                        class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm"
+                        class="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 transition-all"
                         placeholder="Min. 6 characters">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase text-stone-500 tracking-wider">Confirm
-                        Password</label>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1">Confirm Password</label>
                     <input type="password" id="reg-confirm-password" required minlength="6"
-                        class="w-full rounded-xl border-stone-200 focus:border-tsu-blue focus:ring-tsu-blue p-2.5 text-sm"
+                        class="w-full rounded-xl border border-gray-300 p-2.5 text-sm focus:border-tsu-blue focus:ring-2 focus:ring-tsu-blue/20 transition-all"
                         placeholder="Re-enter password">
                 </div>
                 <button type="submit"
-                    class="w-full bg-stone-900 hover:bg-tsu-dark text-tsu-gold font-bold py-3 px-4 rounded-xl shadow-lg transition-all text-sm uppercase tracking-wider mt-2 border border-tsu-gold/30">
-                    Create Account
+                    class="w-full btn-primary font-bold py-3 rounded-xl text-sm uppercase tracking-wider shadow-xl flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-user-check"></i>
+                    <span>Create Account</span>
                 </button>
             </form>
-            <div class="text-center mt-6 pt-4 border-t border-stone-100">
-                <p class="text-xs sm:text-sm text-stone-600">Already have an account? <button
-                        onclick="toggleAuthPanels(false)" class="text-tsu-blue font-bold hover:underline">Log In
-                        Here</button></p>
+            <div class="text-center mt-4 pt-3 border-t border-gray-100">
+                <p class="text-sm text-gray-300">Already have an account? 
+                    <button onclick="toggleAuthPanels(false)" class="text-tsu-accent font-bold hover:underline transition-all">
+                        Sign In
+                    </button>
+                </p>
             </div>
-        </div>
-    </div> <!-- CLOSE auth-screen HERE -->
-
-    <!-- Profile Picture Setup Modal (After Registration) -->
-    <div id="profile-pic-setup-modal"
-        class="fixed inset-0 bg-stone-900/80 hidden flex items-center justify-center p-4 z-[120]">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border text-center">
-            <div
-                class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                <i class="fa-solid fa-circle-check"></i>
-            </div>
-            <h3 class="text-xl font-black text-stone-900 mb-2">Account Created!</h3>
-            <p class="text-sm text-stone-500 mb-6">Would you like to add a profile picture?</p>
-
-            <!-- Profile Picture Preview -->
-            <div class="flex flex-col items-center mb-4">
-                <div
-                    class="w-24 h-24 rounded-full border-3 border-tsu-blue shadow-md overflow-hidden bg-stone-100 flex items-center justify-center mb-3">
-                    <i id="setup-icon-fallback" class="fa-solid fa-user text-4xl text-stone-400"></i>
-                    <img id="setup-img-preview" src="" alt="Profile" class="w-full h-full object-cover hidden">
-                </div>
-                <p id="setup-file-name" class="text-xs text-stone-400"></p>
-            </div>
-
-            <!-- Options -->
-            <div class="grid grid-cols-2 gap-3 mb-4">
-                <button id="setup-camera-btn"
-                    class="bg-tsu-blue text-white rounded-xl py-3 text-sm font-bold hover:bg-tsu-dark transition-colors">
-                    <i class="fa-solid fa-camera mr-1"></i> Camera
-                </button>
-                <button id="setup-upload-btn"
-                    class="bg-stone-100 text-stone-700 rounded-xl py-3 text-sm font-bold border hover:bg-stone-200 transition-colors">
-                    <i class="fa-solid fa-upload mr-1"></i> Upload
-                </button>
-            </div>
-
-            <!-- Hidden inputs -->
-            <input type="file" id="setup-file-input" accept="image/*" class="hidden">
-            <input type="file" id="setup-camera-input" accept="image/*" capture="environment" class="hidden">
-
-            <div class="grid grid-cols-2 gap-3">
-                <button id="setup-skip-btn"
-                    class="bg-stone-100 text-stone-500 rounded-xl py-2.5 text-xs font-bold border hover:bg-stone-200">
-                    Skip for Now
-                </button>
-                <button id="setup-save-btn"
-                    class="bg-emerald-600 text-white rounded-xl py-2.5 text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled>
-                    Save Picture
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Camera Capture Modal -->
-    <div id="camera-modal" class="fixed inset-0 bg-black z-[130] hidden">
-        <div class="relative h-full flex flex-col">
-            <div class="absolute top-4 right-4 z-10">
-                <button id="close-camera-btn"
-                    class="text-white bg-red-500 rounded-full w-10 h-10 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-            <video id="camera-video" class="w-full h-full object-cover" autoplay playsinline></video>
-            <div class="absolute bottom-8 left-0 right-0 flex justify-center">
-                <button id="capture-btn"
-                    class="bg-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg border-4 border-tsu-blue">
-                    <i class="fa-solid fa-camera text-2xl text-tsu-blue"></i>
-                </button>
-            </div>
-            <canvas id="camera-canvas" class="hidden"></canvas>
         </div>
     </div>
 
     <!-- Dashboard -->
     <div id="dashboard" class="hidden min-h-screen flex flex-col lg:flex-row">
+        
         <!-- Mobile Header -->
-        <div class="lg:hidden bg-tsu-blue text-white p-4 flex items-center justify-between z-40 sticky top-0 shadow-md">
+        <div class="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between z-40 sticky top-0 shadow-sm">
             <div class="flex items-center space-x-3">
-                <i class="fa-solid fa-house-user text-tsu-gold text-xl"></i>
-                <span class="font-black text-base tracking-wider uppercase text-tsu-gold">Civic Hub</span>
+                <div class="w-9 h-9 bg-gradient-to-br from-tsu-blue to-tsu-dark rounded-xl flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i>
+                </div>
+                <span class="font-extrabold text-base text-tsu-blue tracking-tight">Civic Hub</span>
             </div>
-            <button onclick="window.toggleMobileMenu()" class="text-white focus:outline-none p-1">
-                <i class="fa-solid fa-bars text-2xl"></i>
+            <button onclick="window.toggleMobileMenu()" class="text-gray-600 hover:text-tsu-blue p-2 rounded-lg hover:bg-gray-100 transition-all">
+                <i class="fa-solid fa-bars text-xl"></i>
             </button>
         </div>
 
         <!-- Desktop Sidebar -->
         <aside id="sidebar"
-            class="w-full lg:w-64 bg-tsu-blue text-white flex flex-col border-r border-tsu-dark hidden lg:flex sticky top-0 h-screen">
-            <div class="p-5 border-b border-tsu-dark bg-tsu-dark/40 flex items-center space-x-3">
-                <i class="fa-solid fa-house-user text-tsu-gold text-xl"></i>
-                <span class="font-black text-base tracking-wider uppercase text-tsu-gold">Civic Hub</span>
+            class="w-full lg:w-72 sidebar-gradient text-white flex flex-col border-r border-white/10 hidden lg:flex h-screen sticky top-0 shadow-2xl shrink-0">
+            <div class="p-6 border-b border-white/10">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-tsu-gold to-tsu-goldDark rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fa-solid fa-building-columns text-tsu-dark"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-sm text-white">Civic Hub</h2>
+                        <p class="text-xs text-gray-400">Resident Portal v2.0</p>
+                    </div>
+                </div>
             </div>
-            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2 mt-2">Main Menu</p>
+                
                 <button onclick="switchTab('announcements')"
-                    class="nav-link w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-bullhorn text-sm sm:text-base w-5"></i><span>Announcements Board</span>
+                    class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-300 transition-all">
+                    <i class="fa-solid fa-bullhorn w-5 text-center text-tsu-gold"></i>
+                    <span>Announcements</span>
                 </button>
                 <button onclick="switchTab('events')"
-                    class="nav-link w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-calendar-days text-sm sm:text-base w-5"></i><span>Event Management</span>
-                </button>
-                <button onclick="switchTab('volunteers')"
-                    class="nav-link w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-hands-holding text-sm sm:text-base w-5"></i><span>Volunteer
-                        Registration</span>
-                </button>
-                <button onclick="switchTab('hours')"
-                    class="nav-link w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-circle-check text-sm sm:text-base w-5"></i><span>Service Hour
-                        Tracker</span>
-                </button>
-                <button onclick="switchTab('donations')"
-                    class="nav-link w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-hand-holding-dollar text-sm sm:text-base w-5"></i><span>Donation
-                    </span>
+                    class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-300 transition-all">
+                    <i class="fa-solid fa-calendar-days w-5 text-center text-tsu-gold"></i>
+                    <span>Events</span>
                 </button>
                 <button onclick="switchTab('my-events')"
-                    class="nav-link w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-calendar-check text-sm sm:text-base w-5"></i><span>My Events</span>
+                    class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-300 transition-all">
+                    <i class="fa-solid fa-calendar-check w-5 text-center text-tsu-gold"></i>
+                    <span>My Events</span>
                 </button>
+                
+                <div class="my-3 border-t border-white/10"></div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Community</p>
+                
+                <button onclick="switchTab('volunteers')"
+                    class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-300 transition-all">
+                    <i class="fa-solid fa-hands-holding w-5 text-center text-tsu-gold"></i>
+                    <span>Volunteer</span>
+                </button>
+                <button onclick="switchTab('hours')"
+                    class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-300 transition-all">
+                    <i class="fa-solid fa-clock w-5 text-center text-tsu-gold"></i>
+                    <span>Service Hours</span>
+                </button>
+                <button onclick="switchTab('donations')"
+                    class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-300 transition-all">
+                    <i class="fa-solid fa-hand-holding-heart w-5 text-center text-tsu-gold"></i>
+                    <span>Donations</span>
+                </button>
+                
+                <div class="my-3 border-t border-white/10"></div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">Account</p>
+                
                 <button onclick="switchTab('profile')"
-                    class="nav-link w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-user text-sm sm:text-base w-5"></i><span>User Profile</span>
+                    class="nav-link w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-300 transition-all">
+                    <i class="fa-solid fa-user-gear w-5 text-center text-tsu-gold"></i>
+                    <span>Profile Settings</span>
                 </button>
-                <div class="pt-4 border-t border-tsu-dark mt-4">
+                
+                <div class="mt-auto pt-6 border-t border-white/10">
                     <button onclick="triggerLogoutConfirmation()"
-                        class="w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm text-amber-400 hover:bg-tsu-dark/40">
-                        <i class="fa-solid fa-arrow-right-from-bracket text-sm sm:text-base w-5"></i><span>Sign
-                            Out</span>
+                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-rose-400 hover:bg-rose-500/10 transition-all">
+                        <i class="fa-solid fa-right-from-bracket w-5 text-center"></i>
+                        <span>Sign Out</span>
                     </button>
                 </div>
             </nav>
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto max-w-7xl mx-auto w-full">
-
+        <main class="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full overflow-y-auto bg-gray-50">
+            
             <!-- Announcements Tab -->
             <section id="announcements" class="tab-content hidden">
-                <div class="border-b pb-3 sm:pb-4 mb-4 sm:mb-6">
-                    <h1 class="text-2xl sm:text-3xl font-black text-tsu-blue">Civic Announcements Board</h1>
+                <div class="pb-4 mb-6 border-b-2 border-gray-200">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-tsu-blue tracking-tight">Civic Announcements</h1>
+                    <p class="text-sm text-gray-500 mt-1">Stay updated with the latest community news</p>
                 </div>
-                <div id="announcements-container" class="space-y-3 sm:space-y-4"></div>
+                <div id="announcements-container" class="space-y-4"></div>
             </section>
 
             <!-- Events Tab -->
             <section id="events" class="tab-content hidden">
-                <div class="border-b pb-3 sm:pb-4 mb-4 sm:mb-6">
-                    <h1 class="text-2xl sm:text-3xl font-black text-tsu-blue">Upcoming Civic Events</h1>
+                <div class="pb-4 mb-6 border-b-2 border-gray-200">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-tsu-blue tracking-tight">Upcoming Events</h1>
+                    <p class="text-sm text-gray-500 mt-1">Discover and join community events</p>
                 </div>
-                <div id="events-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"></div>
+                <div id="events-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- My Events Tab -->
+            <section id="my-events" class="tab-content hidden">
+                <div class="pb-4 mb-6 border-b-2 border-gray-200">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-tsu-blue tracking-tight">My Registered Events</h1>
+                    <p class="text-sm text-gray-500 mt-1">Track your event participations</p>
+                </div>
+                <div id="my-events-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
             </section>
 
             <!-- Volunteers Tab -->
             <section id="volunteers" class="tab-content hidden">
-                <div class="border-b pb-3 sm:pb-4 mb-4 sm:mb-6">
-                    <h1 class="text-2xl sm:text-3xl font-black text-tsu-blue">Volunteer Management System</h1>
+                <div class="pb-4 mb-6 border-b-2 border-gray-200">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-tsu-blue tracking-tight">Volunteer Registration</h1>
+                    <p class="text-sm text-gray-500 mt-1">Apply to become a community volunteer</p>
                 </div>
-                <div class="max-w-xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-stone-200">
-                    <h3 class="text-lg sm:text-xl font-bold mb-4 text-stone-800">
-                        <i class="fa-solid fa-hands-holding text-tsu-blue mr-2"></i>Apply as Community Volunteer
-                    </h3>
-                    <form id="volunteer-form" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-stone-700">Full Name</label>
-                            <input type="text" id="vol-name" required readonly
-                                class="w-full bg-stone-50 border rounded-md p-2 text-stone-500 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-stone-700">Core Skills /
-                                Specialization</label>
-                            <input type="text" id="vol-skills" placeholder="e.g., First Aid, Logistics, Teaching"
-                                required
-                                class="w-full border rounded-md p-2 text-sm focus:ring-tsu-blue focus:border-tsu-blue">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-stone-700">General Availability</label>
-                            <select id="vol-avail"
-                                class="w-full border rounded-md p-2 text-sm focus:ring-tsu-blue focus:border-tsu-blue">
-                                <option value="Weekends">Weekends Only</option>
-                                <option value="Weekdays">Weekdays Only</option>
-                                <option value="Flexible">Flexible / On-Call</option>
-                            </select>
-                        </div>
-                        <button type="submit"
-                            class="w-full bg-tsu-blue hover:bg-tsu-dark text-tsu-gold font-bold py-2.5 rounded-md shadow transition-colors text-sm">
-                            Submit Roster Application
-                        </button>
-                    </form>
+                <div class="max-w-xl mx-auto">
+                    <div class="card p-8">
+                        <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center">
+                            <i class="fa-solid fa-hands-holding text-tsu-blue mr-2"></i>Volunteer Application
+                        </h3>
+                        <form id="volunteer-form" class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                <input type="text" id="vol-name" required readonly
+                                    class="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-gray-50 text-gray-500 cursor-not-allowed">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Skills & Specialization</label>
+                                <input type="text" id="vol-skills" placeholder="e.g., First Aid, Logistics, Teaching" required
+                                    class="w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Availability</label>
+                                <select id="vol-avail"
+                                    class="w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue transition-all">
+                                    <option value="Weekends">Weekends Only</option>
+                                    <option value="Weekdays">Weekdays Only</option>
+                                    <option value="Flexible">Flexible / On-Call</option>
+                                </select>
+                            </div>
+                            <button type="submit"
+                                class="btn-primary w-full py-3 rounded-xl text-sm flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                <span>Submit Application</span>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </section>
 
             <!-- Hours Tab -->
             <section id="hours" class="tab-content hidden">
-                <div class="border-b pb-3 sm:pb-4 mb-4 sm:mb-6">
-                    <h1 class="text-2xl sm:text-3xl font-black text-tsu-blue">Community Service Hour Tracker</h1>
+                <div class="pb-4 mb-6 border-b-2 border-gray-200">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-tsu-blue tracking-tight">Service Hours</h1>
+                    <p class="text-sm text-gray-500 mt-1">Track your community service contributions</p>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                    <div class="bg-white p-4 sm:p-6 rounded-xl border shadow-sm text-center">
-                        <h3 class="text-xs sm:text-sm font-bold text-stone-500 uppercase tracking-wider">Your
-                            Verified
-                            Civic Input</h3>
-                        <p id="total-hours-display" class="text-4xl sm:text-5xl font-black text-tsu-blue my-2">0.0
-                        </p>
-                        <p class="text-xs text-stone-400">Hours recorded & approved by system administrators</p>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="card p-8 text-center bg-gradient-to-br from-tsu-light to-white">
+                        <div class="w-16 h-16 bg-tsu-blue/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fa-solid fa-award text-2xl text-tsu-blue"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Hours</p>
+                        <p id="total-hours-display" class="text-5xl font-black text-tsu-blue my-3">0.0</p>
+                        <p class="text-xs text-gray-400">Verified & approved hours</p>
                     </div>
-                    <div class="lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl border shadow-sm">
-                        <h3 class="text-base sm:text-lg font-bold mb-4 text-stone-800">Your Contributions Log</h3>
-                        <div class="overflow-x-auto -mx-4 sm:mx-0">
-                            <table class="min-w-full table-fixed divide-y divide-stone-200 border-collapse">
-                                <thead
-                                    class="bg-stone-50 text-[11px] font-bold uppercase tracking-wider text-stone-500">
-                                    <tr>
-                                        <th class="w-[50%] px-4 py-3 text-left">Event Title</th>
-                                        <th class="w-[25%] px-4 py-3 text-left">Rendered Hours</th>
-                                        <th class="w-[25%] px-4 py-3 text-left">Verification Status</th>
+                    <div class="lg:col-span-2 card p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Contribution History</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm responsive-table">
+                                <thead>
+                                    <tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th class="px-4 py-3 text-left">Event</th>
+                                        <th class="px-4 py-3 text-left">Hours</th>
+                                        <th class="px-4 py-3 text-left">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody id="user-hours-tbody" class="divide-y divide-stone-100 text-xs sm:text-sm">
-                                </tbody>
+                                <tbody id="user-hours-tbody" class="divide-y divide-gray-100"></tbody>
                             </table>
                         </div>
                     </div>
@@ -501,188 +578,165 @@
 
             <!-- Donations Tab -->
             <section id="donations" class="tab-content hidden">
-                <div class="border-b pb-3 sm:pb-4 mb-4 sm:mb-6">
-                    <h1 class="text-2xl sm:text-3xl font-black text-tsu-blue">Donation & Resource Tracking</h1>
+                <div class="pb-4 mb-6 border-b-2 border-gray-200">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-tsu-blue tracking-tight">Donations</h1>
+                    <p class="text-sm text-gray-500 mt-1">Support community initiatives</p>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                    <div class="bg-white p-4 sm:p-6 rounded-xl border shadow-sm h-fit">
-                        <h3 class="text-base sm:text-lg font-bold mb-4 text-stone-800">Log Financial/Resource
-                            Contribution</h3>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="card p-6 h-fit">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                            <i class="fa-solid fa-hand-holding-heart text-tsu-blue mr-2"></i>Make a Donation
+                        </h3>
                         <form id="donation-form" class="space-y-4">
                             <div>
-                                <label class="block text-xs sm:text-sm font-medium text-stone-700">Item or Fund
-                                    Amount
-                                    (PHP)</label>
-                                <input type="text" id="don-item" placeholder="e.g., 500 PHP or 2 Boxes of Canned Goods"
-                                    required
-                                    class="w-full border rounded-md p-2 text-sm focus:ring-tsu-blue focus:border-tsu-blue">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Item / Amount</label>
+                                <input type="text" id="don-item" placeholder="e.g., 500 PHP or Canned Goods" required
+                                    class="w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue transition-all">
                             </div>
                             <div>
-                                <label class="block text-xs sm:text-sm font-medium text-stone-700">Target Initiative
-                                    /
-                                    Purpose</label>
-                                <input type="text" id="don-purpose" placeholder="e.g., Typhoon Relief Fund" required
-                                    class="w-full border rounded-md p-2 text-sm focus:ring-tsu-blue focus:border-tsu-blue">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Purpose</label>
+                                <input type="text" id="don-purpose" placeholder="e.g., Typhoon Relief" required
+                                    class="w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue transition-all">
                             </div>
                             <button type="submit"
-                                class="w-full bg-tsu-blue hover:bg-tsu-dark text-tsu-gold font-bold py-2.5 rounded-md shadow transition-colors text-sm">
-                                Publish Declaration
+                                class="btn-primary w-full py-2.5 rounded-xl text-sm flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-heart"></i>
+                                <span>Submit Donation</span>
                             </button>
                         </form>
                     </div>
-                    <div class="lg:col-span-2 bg-white p-4 sm:p-6 rounded-xl border shadow-sm">
-                        <h3 class="text-base sm:text-lg font-bold mb-4 text-stone-800">Community Transparency Board
-                        </h3>
-                        <div class="overflow-x-auto -mx-4 sm:mx-0">
-                            <table class="min-w-full table-fixed divide-y divide-stone-200 border-collapse">
-                                <thead
-                                    class="bg-stone-50 text-[11px] font-bold uppercase tracking-wider text-stone-500">
-                                    <tr>
-                                        <th class="w-1/3 px-4 py-3 text-left">Contributor</th>
-                                        <th class="w-1/3 px-4 py-3 text-left">Resource / Amount</th>
-                                        <th class="w-1/3 px-4 py-3 text-left">Independent Assignment</th>
+                    <div class="lg:col-span-2 card p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Community Donations</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm responsive-table">
+                                <thead>
+                                    <tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th class="px-4 py-3 text-left">Donor</th>
+                                        <th class="px-4 py-3 text-left">Item/Amount</th>
+                                        <th class="px-4 py-3 text-left">Purpose</th>
                                     </tr>
                                 </thead>
-                                <tbody id="public-donations-tbody" class="divide-y divide-stone-100 text-xs sm:text-sm">
-                                </tbody>
+                                <tbody id="public-donations-tbody" class="divide-y divide-gray-100"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- My Events Tab -->
-            <section id="my-events" class="tab-content hidden">
-                <div class="border-b pb-3 sm:pb-4 mb-4 sm:mb-6">
-                    <h1 class="text-2xl sm:text-3xl font-black text-tsu-blue">
-                        <i class="fa-solid fa-calendar-check mr-2"></i>My Registered Events
-                    </h1>
-                </div>
-                <div id="my-events-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"></div>
-            </section>
-
             <!-- Profile Tab -->
-            <section id="profile" class="tab-content hidden w-full max-w-2xl mx-auto p-4 md:p-6">
-                <h2 class="text-2xl font-black text-tsu-blue mb-6">Resident Profile</h2>
+            <section id="profile" class="tab-content hidden max-w-2xl mx-auto">
+                <div class="pb-4 mb-6 border-b-2 border-gray-200">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-tsu-blue tracking-tight">Profile Settings</h1>
+                    <p class="text-sm text-gray-500 mt-1">Manage your account information</p>
+                </div>
 
-                <form id="profile-form" class="bg-white p-6 md:p-8 rounded-2xl border border-stone-200 shadow-sm">
-
-                    <div class="flex flex-col items-center mb-8">
-                        <div id="upload-trigger" class="relative group w-32 h-32 cursor-pointer">
-                            <div
-                                class="w-full h-full rounded-full border-4 border-tsu-blue shadow-md overflow-hidden bg-stone-100 flex items-center justify-center relative">
-                                <i id="profile-icon-fallback" class="fa-solid fa-user text-5xl text-stone-400"></i>
-                                <img id="profile-img-preview" src="" alt="Profile Picture"
-                                    class="w-full h-full object-cover hidden">
+                <form id="profile-form" class="card p-8 space-y-6">
+                    <div class="flex flex-col items-center pb-6 border-b border-gray-100">
+                        <div id="upload-trigger" class="relative group cursor-pointer">
+                            <div class="w-28 h-28 rounded-2xl border-4 border-tsu-blue/20 shadow-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                                <i id="profile-icon-fallback" class="fa-solid fa-user text-4xl text-gray-300"></i>
+                                <img id="profile-img-preview" src="" alt="Profile" class="w-full h-full object-cover hidden">
                             </div>
-                            <label for="profile-img-input" id="profile-img-label"
-                                class="absolute inset-0 bg-black/50 text-white rounded-full flex flex-col items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-200">
-                                <i class="fa-solid fa-camera text-lg mb-1"></i>
+                            <div class="absolute inset-0 bg-black/40 rounded-2xl flex flex-col items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-all">
+                                <i class="fa-solid fa-camera text-xl mb-1"></i>
                                 Change
-                            </label>
+                            </div>
                         </div>
                         <input type="file" id="profile-img-input" accept="image/*" class="hidden">
+                        <h3 id="profile-display-name" class="font-bold text-lg text-gray-800 mt-4"></h3>
+                        <p id="profile-display-email" class="text-sm text-gray-500"></p>
+                    </div>
 
-                        <div class="mt-4 text-center">
-                            <h3 id="profile-display-name" class="font-bold text-lg text-stone-800">...</h3>
-                            <p id="profile-display-email" class="text-xs text-stone-500">...</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                            <input type="text" id="prof-name" class="w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                            <input type="email" id="prof-email" readonly class="w-full border border-gray-300 rounded-xl p-2.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
+                            <input type="tel" id="prof-phone" class="w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Address</label>
+                            <input type="text" id="prof-address" class="w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue transition-all">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-stone-500 uppercase mb-1">Full Name</label>
-                            <input type="text" id="prof-name"
-                                class="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 outline-none transition-all">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-stone-500 uppercase mb-1">Email
-                                Address</label>
-                            <input type="email" id="prof-email" readonly
-                                class="w-full bg-stone-100 border border-stone-200 rounded-lg px-4 py-2.5 text-sm text-stone-400 cursor-not-allowed">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-stone-500 uppercase mb-1">Phone
-                                Number</label>
-                            <input type="tel" id="prof-phone"
-                                class="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 outline-none transition-all">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-stone-500 uppercase mb-1">Residential
-                                Address</label>
-                            <input type="text" id="prof-address"
-                                class="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 outline-none transition-all">
-                        </div>
-                    </div>
-
-                    <div class="mt-6 border-t pt-6">
-                        <label class="block text-xs font-bold text-stone-500 uppercase mb-2">Account
-                            Password</label>
+                    <div class="border-t border-gray-100 pt-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
                         <div class="relative">
-                            <input type="password" id="prof-pass"
-                                class="w-full bg-stone-50 border border-stone-200 rounded-lg px-4 py-2.5 text-sm pr-10 focus:ring-2 focus:ring-tsu-blue/20 outline-none transition-all"
-                                placeholder="Enter new password">
+                            <input type="password" id="prof-pass" class="w-full border border-gray-300 rounded-xl p-2.5 pr-10 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue transition-all" placeholder="Enter new password">
                             <button type="button" id="toggle-prof-password"
-                                class="absolute right-3 top-2.5 text-stone-400 hover:text-tsu-blue transition-colors">
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-tsu-blue transition-colors">
                                 <i id="prof-password-icon" class="fa-solid fa-eye"></i>
                             </button>
                         </div>
+                        <p class="text-xs text-gray-400 mt-1">Leave blank to keep current password</p>
                     </div>
 
-                    <button type="submit" id="save-profile-btn"
-                        class="mt-8 w-full bg-tsu-blue border border-tsu-blue/20 text-tsu-gold font-bold py-3 rounded-xl text-sm hover:bg-tsu-blue/90 transition-colors shadow-sm">
-                        Save Profile Changes
+                    <button type="submit" class="btn-primary w-full py-3 rounded-xl text-sm flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Save Changes</span>
                     </button>
                 </form>
             </section>
         </main>
     </div>
 
-    <!-- Mobile Menu Overlay (MOVED OUTSIDE dashboard) -->
+    <!-- Mobile Menu Overlay -->
     <div id="mobile-menu"
-        class="fixed inset-0 bg-stone-900/50 z-[200] hidden transition-opacity duration-300 opacity-0">
+        class="fixed inset-0 bg-gray-900/50 z-[200] hidden transition-opacity duration-300 opacity-0">
         <div id="menu-panel"
-            class="absolute right-0 top-0 h-full w-64 bg-tsu-blue shadow-2xl translate-x-full transition-transform duration-300 ease-out flex flex-col border-l border-tsu-dark">
-            <div class="p-4 border-b border-tsu-dark bg-tsu-dark/40 flex items-center justify-between">
-                <span class="font-black text-sm tracking-wider uppercase text-tsu-gold"><i
-                        class="fa-solid fa-house-user mr-2"></i>Civic Hub</span>
-                <button onclick="window.toggleMobileMenu()" class="text-white hover:text-stone-300 p-1">
+            class="absolute right-0 top-0 h-full w-72 bg-white shadow-2xl translate-x-full transition-transform duration-300 ease-out flex flex-col">
+            <div class="p-5 border-b border-gray-100 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 bg-gradient-to-br from-tsu-blue to-tsu-dark rounded-xl flex items-center justify-center shadow-md">
+                        <i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i>
+                    </div>
+                    <span class="font-extrabold text-tsu-blue">Civic Hub</span>
+                </div>
+                <button onclick="window.toggleMobileMenu()" class="text-gray-400 hover:text-gray-600 p-1">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
-            <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">Menu</p>
                 <button onclick="switchTab('announcements'); window.toggleMobileMenu()"
-                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-bullhorn w-5"></i><span>Announcements</span>
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:bg-gray-50 font-medium">
+                    <i class="fa-solid fa-bullhorn w-5 text-tsu-blue"></i><span>Announcements</span>
                 </button>
                 <button onclick="switchTab('events'); window.toggleMobileMenu()"
-                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-calendar-days w-5"></i><span>Event Management</span>
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:bg-gray-50 font-medium">
+                    <i class="fa-solid fa-calendar-days w-5 text-tsu-blue"></i><span>Events</span>
+                </button>
+                <button onclick="switchTab('my-events'); window.toggleMobileMenu()"
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:bg-gray-50 font-medium">
+                    <i class="fa-solid fa-calendar-check w-5 text-tsu-blue"></i><span>My Events</span>
                 </button>
                 <button onclick="switchTab('volunteers'); window.toggleMobileMenu()"
-                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-hands-holding w-5"></i><span>Volunteer Registry</span>
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:bg-gray-50 font-medium">
+                    <i class="fa-solid fa-hands-holding w-5 text-tsu-blue"></i><span>Volunteer</span>
                 </button>
                 <button onclick="switchTab('hours'); window.toggleMobileMenu()"
-                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-circle-check w-5"></i><span>Service Hours</span>
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:bg-gray-50 font-medium">
+                    <i class="fa-solid fa-clock w-5 text-tsu-blue"></i><span>Service Hours</span>
                 </button>
                 <button onclick="switchTab('donations'); window.toggleMobileMenu()"
-                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-hand-holding-dollar w-5"></i><span>Donation Hub</span>
-                </button>
-                <button onclick="switchTab('my-events'); toggleMobileMenu()"
-                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-calendar-check w-5"></i><span>My Events</span>
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:bg-gray-50 font-medium">
+                    <i class="fa-solid fa-hand-holding-heart w-5 text-tsu-blue"></i><span>Donations</span>
                 </button>
                 <button onclick="switchTab('profile'); window.toggleMobileMenu()"
-                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                    <i class="fa-solid fa-user w-5"></i><span>User Profile</span>
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-gray-600 hover:bg-gray-50 font-medium">
+                    <i class="fa-solid fa-user-gear w-5 text-tsu-blue"></i><span>Profile</span>
                 </button>
-                <div class="pt-4 border-t border-tsu-dark mt-4">
+                <div class="pt-4 mt-4 border-t border-gray-100">
                     <button onclick="triggerLogoutConfirmation(); window.toggleMobileMenu()"
-                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-amber-400 hover:bg-tsu-dark/40">
-                        <i class="fa-solid fa-arrow-right-from-bracket w-5"></i><span>Sign Out</span>
+                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm text-rose-600 hover:bg-rose-50 font-medium">
+                        <i class="fa-solid fa-right-from-bracket w-5"></i><span>Sign Out</span>
                     </button>
                 </div>
             </nav>
@@ -691,54 +745,217 @@
 
     <!-- Event Details Modal -->
     <div id="view-event-modal" onclick="if(event.target === this) toggleModal('view-event-modal')"
-        class="fixed inset-0 bg-stone-900/60 hidden flex items-center justify-center p-4 z-50">
-        <div
-            class="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl border relative max-h-[90vh] overflow-y-auto">
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 relative max-h-[90vh] overflow-y-auto modal-enter">
             <button onclick="toggleModal('view-event-modal')"
-                class="absolute top-3 sm:top-4 right-3 sm:right-4 text-stone-400 hover:text-stone-600">
-                <i class="fa-solid fa-xmark text-lg sm:text-xl"></i>
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
             </button>
-            <h2 id="modal-event-title" class="text-xl sm:text-2xl font-black text-tsu-blue mb-2 pr-8"></h2>
-            <div class="space-y-2 my-3 sm:my-4 text-xs sm:text-sm text-stone-600 bg-stone-50 p-3 rounded-xl border">
-                <p id="modal-event-date"></p>
-                <p id="modal-event-location"></p>
+            <h2 id="modal-event-title" class="text-2xl font-extrabold text-tsu-blue mb-2 pr-8"></h2>
+            <div class="space-y-3 my-4 text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <p id="modal-event-date" class="flex items-center"><i class="fa-solid fa-calendar mr-2 text-tsu-blue"></i></p>
+                <p id="modal-event-location" class="flex items-center"><i class="fa-solid fa-location-dot mr-2 text-tsu-blue"></i></p>
             </div>
-            <p id="modal-event-desc" class="text-xs sm:text-sm text-stone-700 leading-relaxed whitespace-pre-line">
-            </p>
+            <p id="modal-event-desc" class="text-sm text-gray-700 leading-relaxed whitespace-pre-line mb-6"></p>
+            <button onclick="toggleModal('view-event-modal')"
+                class="w-full bg-gray-100 text-gray-700 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-200 transition-colors">
+                Close Details
+            </button>
         </div>
     </div>
 
     <!-- Toast Alert -->
     <div id="custom-alert"
-        class="fixed top-4 sm:top-5 right-4 sm:right-5 z-[200] max-w-[calc(100vw-2rem)] sm:max-w-sm w-full bg-white rounded-2xl shadow-2xl border p-3 sm:p-4 transform translate-x-96 opacity-0 transition-all duration-300 pointer-events-none flex items-start space-x-3">
+        class="fixed top-4 sm:top-5 right-4 sm:right-5 z-[200] max-w-[calc(100vw-2rem)] sm:max-w-sm w-full bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 transform translate-x-96 opacity-0 transition-all duration-300 pointer-events-none flex items-start space-x-3">
         <div id="alert-icon-box" class="p-2 rounded-xl text-white mt-0.5 shrink-0">
             <i id="alert-icon" class="fa-solid text-lg"></i>
         </div>
         <div class="flex-1 min-w-0">
-            <h4 id="alert-title" class="font-black text-stone-950 text-xs sm:text-sm">Notification</h4>
-            <p id="alert-message" class="text-xs text-stone-600 mt-0.5 leading-relaxed break-words"></p>
+            <h4 id="alert-title" class="font-extrabold text-gray-900 text-sm">Notification</h4>
+            <p id="alert-message" class="text-xs text-gray-600 mt-0.5 leading-relaxed break-words"></p>
         </div>
-        <button onclick="closeCustomAlert()" class="text-stone-400 hover:text-stone-600 shrink-0">
+        <button onclick="closeCustomAlert()" class="text-gray-400 hover:text-gray-600 shrink-0">
             <i class="fa-solid fa-xmark text-sm"></i>
         </button>
     </div>
 
     <!-- Confirmation Modal -->
-    <div id="confirm-modal" class="fixed inset-0 bg-stone-900/60 hidden flex items-center justify-center p-4 z-[150]">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-5 sm:p-6 border shadow-2xl text-center">
-            <div
-                class="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 text-lg sm:text-xl">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+    <div id="confirm-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-[150]">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 border border-gray-200 shadow-2xl text-center modal-enter">
+            <div class="w-14 h-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl shadow-sm">
+                <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
-            <h3 id="confirm-title" class="text-base sm:text-lg font-black text-stone-900">Are you sure?</h3>
-            <p id="confirm-msg" class="text-xs text-stone-500 mt-1 leading-relaxed">You will be securely logged out
-                of
-                your session.</p>
-            <div class="grid grid-cols-2 gap-3 mt-5">
+            <h3 id="confirm-title" class="text-lg font-extrabold text-gray-900">Are you sure?</h3>
+            <p id="confirm-msg" class="text-sm text-gray-500 mt-2 leading-relaxed"></p>
+            <div class="grid grid-cols-2 gap-3 mt-6">
                 <button id="confirm-cancel-btn"
-                    class="bg-stone-100 text-stone-700 rounded-xl py-2 text-xs font-bold border">Cancel</button>
+                    class="px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all">
+                    Cancel
+                </button>
                 <button id="confirm-proceed-btn"
-                    class="bg-tsu-blue text-white rounded-xl py-2 text-xs font-bold hover:bg-tsu-dark">Unregister</button>
+                    class="px-4 py-2.5 rounded-xl text-sm font-semibold bg-tsu-blue text-tsu-gold hover:bg-tsu-dark transition-all shadow-lg">
+                    Proceed
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Picture Setup Modal -->
+    <div id="profile-pic-setup-modal"
+        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-[120]">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-200 text-center modal-enter">
+            <div class="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 class="text-xl font-extrabold text-gray-900 mb-2">Account Created!</h3>
+            <p class="text-sm text-gray-500 mb-6">Would you like to add a profile picture?</p>
+            <div class="flex flex-col items-center mb-4">
+                <div class="w-24 h-24 rounded-2xl border-4 border-tsu-blue/20 shadow-md overflow-hidden bg-gray-50 flex items-center justify-center mb-3">
+                    <i id="setup-icon-fallback" class="fa-solid fa-user text-4xl text-gray-300"></i>
+                    <img id="setup-img-preview" src="" alt="Profile" class="w-full h-full object-cover hidden">
+                </div>
+                <p id="setup-file-name" class="text-xs text-gray-400"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button id="setup-camera-btn"
+                    class="btn-primary py-3 text-sm font-bold rounded-xl flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-camera"></i><span>Camera</span>
+                </button>
+                <button id="setup-upload-btn"
+                    class="btn-secondary py-3 text-sm font-bold rounded-xl flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-upload"></i><span>Upload</span>
+                </button>
+            </div>
+            <input type="file" id="setup-file-input" accept="image/*" class="hidden">
+            <input type="file" id="setup-camera-input" accept="image/*" capture="environment" class="hidden">
+            <div class="grid grid-cols-2 gap-3">
+                <button id="setup-skip-btn"
+                    class="px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-all">
+                    Skip for Now
+                </button>
+                <button id="setup-save-btn"
+                    class="px-4 py-2.5 rounded-xl text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                    Save Picture
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAYMENT MODAL -->
+    <div id="payment-modal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 modal-enter max-h-[90vh] overflow-y-auto">
+            <button onclick="toggleModal('payment-modal')"
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            
+            <h2 class="text-xl font-extrabold text-tsu-blue mb-6 flex items-center">
+                <i class="fa-solid fa-credit-card mr-2"></i>Complete Donation Payment
+            </h2>
+            
+            <!-- Donation Summary -->
+            <div class="bg-gray-50 p-4 rounded-xl mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-gray-600">Donation Item:</span>
+                    <span id="payment-item" class="text-sm font-bold text-gray-900"></span>
+                </div>
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-gray-600">Purpose:</span>
+                    <span id="payment-purpose" class="text-sm font-bold text-gray-900"></span>
+                </div>
+                <div class="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <span class="text-sm text-gray-600">Amount:</span>
+                    <span id="payment-amount" class="text-lg font-extrabold text-tsu-blue"></span>
+                </div>
+            </div>
+            
+            <!-- Payment Method Selection -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">Select Payment Method</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="selectPaymentMethod('gcash')" 
+                        class="payment-method-btn p-4 border-2 border-gray-200 rounded-xl text-center hover:border-blue-500 transition-all"
+                        data-method="gcash">
+                        <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i class="fa-solid fa-mobile-screen text-blue-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-gray-700">GCash</span>
+                    </button>
+                    <button onclick="selectPaymentMethod('paymaya')" 
+                        class="payment-method-btn p-4 border-2 border-gray-200 rounded-xl text-center hover:border-purple-500 transition-all"
+                        data-method="paymaya">
+                        <div class="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i class="fa-solid fa-wallet text-purple-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-gray-700">PayMaya</span>
+                    </button>
+                    <button onclick="selectPaymentMethod('bank_transfer')" 
+                        class="payment-method-btn p-4 border-2 border-gray-200 rounded-xl text-center hover:border-emerald-500 transition-all"
+                        data-method="bank_transfer">
+                        <div class="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i class="fa-solid fa-building-columns text-emerald-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-gray-700">Bank Transfer</span>
+                    </button>
+                    <button onclick="selectPaymentMethod('cash')" 
+                        class="payment-method-btn p-4 border-2 border-gray-200 rounded-xl text-center hover:border-amber-500 transition-all"
+                        data-method="cash">
+                        <div class="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i class="fa-solid fa-money-bill text-amber-600 text-xl"></i>
+                        </div>
+                        <span class="text-xs font-bold text-gray-700">Cash</span>
+                    </button>
+                </div>
+                <input type="hidden" id="selected-payment-method" value="">
+            </div>
+            
+            <!-- Amount Input -->
+            <div class="mb-6" id="amount-input-container">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Donation Amount (PHP)</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-bold">₱</span>
+                    <input type="number" id="donation-amount" 
+                        class="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue text-lg font-bold transition-all"
+                        placeholder="0.00" min="1" step="0.01">
+                </div>
+                <div class="grid grid-cols-4 gap-2 mt-2">
+                    <button onclick="setAmount(50)" class="py-2 px-3 bg-gray-100 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all">₱50</button>
+                    <button onclick="setAmount(100)" class="py-2 px-3 bg-gray-100 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all">₱100</button>
+                    <button onclick="setAmount(500)" class="py-2 px-3 bg-gray-100 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all">₱500</button>
+                    <button onclick="setAmount(1000)" class="py-2 px-3 bg-gray-100 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all">₱1000</button>
+                </div>
+            </div>
+            
+            <!-- Donor Name -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Donor Name</label>
+                <input type="text" id="payment-donor-name" 
+                    class="w-full border border-gray-300 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue transition-all"
+                    placeholder="Enter your full name">
+            </div>
+            
+            <!-- QR Code Container -->
+            <div id="qr-code-container" class="hidden mb-6 text-center">
+                <div class="bg-gray-100 p-4 rounded-xl inline-block">
+                    <div id="qr-code-placeholder" class="w-48 h-48 bg-white border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center mx-auto">
+                        <p class="text-xs text-gray-500">QR Code will appear here</p>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Scan the QR code with your payment app</p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex space-x-3">
+                <button onclick="toggleModal('payment-modal')"
+                    class="flex-1 px-5 py-3 rounded-xl text-sm font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all">
+                    Cancel
+                </button>
+                <button onclick="processPayment()"
+                    class="flex-1 btn-primary px-5 py-3 rounded-xl text-sm flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-lock"></i>
+                    <span>Pay Now</span>
+                </button>
             </div>
         </div>
     </div>
