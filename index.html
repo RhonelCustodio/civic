@@ -134,6 +134,15 @@
             outline: 2px solid transparent !important;
             outline-offset: 2px !important;
         }
+
+        /* Mobile menu transitions */
+        #mobile-menu {
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        #menu-panel {
+            transition: transform 0.3s ease-in-out;
+        }
     </style>
 </head>
 
@@ -263,125 +272,78 @@
                         Here</button></p>
             </div>
         </div>
+    </div> <!-- CLOSE auth-screen HERE -->
 
-        <!-- Profile Picture Setup Modal (After Registration) -->
-        <div id="profile-pic-setup-modal"
-            class="fixed inset-0 bg-stone-900/80 hidden flex items-center justify-center p-4 z-[120]">
-            <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border text-center">
+    <!-- Profile Picture Setup Modal (After Registration) -->
+    <div id="profile-pic-setup-modal"
+        class="fixed inset-0 bg-stone-900/80 hidden flex items-center justify-center p-4 z-[120]">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border text-center">
+            <div
+                class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3 class="text-xl font-black text-stone-900 mb-2">Account Created!</h3>
+            <p class="text-sm text-stone-500 mb-6">Would you like to add a profile picture?</p>
+
+            <!-- Profile Picture Preview -->
+            <div class="flex flex-col items-center mb-4">
                 <div
-                    class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                    <i class="fa-solid fa-circle-check"></i>
+                    class="w-24 h-24 rounded-full border-3 border-tsu-blue shadow-md overflow-hidden bg-stone-100 flex items-center justify-center mb-3">
+                    <i id="setup-icon-fallback" class="fa-solid fa-user text-4xl text-stone-400"></i>
+                    <img id="setup-img-preview" src="" alt="Profile" class="w-full h-full object-cover hidden">
                 </div>
-                <h3 class="text-xl font-black text-stone-900 mb-2">Account Created!</h3>
-                <p class="text-sm text-stone-500 mb-6">Would you like to add a profile picture?</p>
+                <p id="setup-file-name" class="text-xs text-stone-400"></p>
+            </div>
 
-                <!-- Profile Picture Preview -->
-                <div class="flex flex-col items-center mb-4">
-                    <div
-                        class="w-24 h-24 rounded-full border-3 border-tsu-blue shadow-md overflow-hidden bg-stone-100 flex items-center justify-center mb-3">
-                        <i id="setup-icon-fallback" class="fa-solid fa-user text-4xl text-stone-400"></i>
-                        <img id="setup-img-preview" src="" alt="Profile" class="w-full h-full object-cover hidden">
-                    </div>
-                    <p id="setup-file-name" class="text-xs text-stone-400"></p>
-                </div>
+            <!-- Options -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button id="setup-camera-btn"
+                    class="bg-tsu-blue text-white rounded-xl py-3 text-sm font-bold hover:bg-tsu-dark transition-colors">
+                    <i class="fa-solid fa-camera mr-1"></i> Camera
+                </button>
+                <button id="setup-upload-btn"
+                    class="bg-stone-100 text-stone-700 rounded-xl py-3 text-sm font-bold border hover:bg-stone-200 transition-colors">
+                    <i class="fa-solid fa-upload mr-1"></i> Upload
+                </button>
+            </div>
 
-                <!-- Options -->
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <button id="setup-camera-btn"
-                        class="bg-tsu-blue text-white rounded-xl py-3 text-sm font-bold hover:bg-tsu-dark transition-colors">
-                        <i class="fa-solid fa-camera mr-1"></i> Camera
-                    </button>
-                    <button id="setup-upload-btn"
-                        class="bg-stone-100 text-stone-700 rounded-xl py-3 text-sm font-bold border hover:bg-stone-200 transition-colors">
-                        <i class="fa-solid fa-upload mr-1"></i> Upload
-                    </button>
-                </div>
+            <!-- Hidden inputs -->
+            <input type="file" id="setup-file-input" accept="image/*" class="hidden">
+            <input type="file" id="setup-camera-input" accept="image/*" capture="environment" class="hidden">
 
-                <!-- Hidden inputs -->
-                <input type="file" id="setup-file-input" accept="image/*" class="hidden">
-                <input type="file" id="setup-camera-input" accept="image/*" capture="environment" class="hidden">
-
-                <div class="grid grid-cols-2 gap-3">
-                    <button id="setup-skip-btn"
-                        class="bg-stone-100 text-stone-500 rounded-xl py-2.5 text-xs font-bold border hover:bg-stone-200">
-                        Skip for Now
-                    </button>
-                    <button id="setup-save-btn"
-                        class="bg-emerald-600 text-white rounded-xl py-2.5 text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled>
-                        Save Picture
-                    </button>
-                </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="setup-skip-btn"
+                    class="bg-stone-100 text-stone-500 rounded-xl py-2.5 text-xs font-bold border hover:bg-stone-200">
+                    Skip for Now
+                </button>
+                <button id="setup-save-btn"
+                    class="bg-emerald-600 text-white rounded-xl py-2.5 text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                    Save Picture
+                </button>
             </div>
         </div>
+    </div>
 
-        <!-- Camera Capture Modal -->
-        <div id="camera-modal" class="fixed inset-0 bg-black z-[130] hidden">
-            <div class="relative h-full flex flex-col">
-                <div class="absolute top-4 right-4 z-10">
-                    <button id="close-camera-btn"
-                        class="text-white bg-red-500 rounded-full w-10 h-10 flex items-center justify-center text-lg">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-                <video id="camera-video" class="w-full h-full object-cover" autoplay playsinline></video>
-                <div class="absolute bottom-8 left-0 right-0 flex justify-center">
-                    <button id="capture-btn"
-                        class="bg-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg border-4 border-tsu-blue">
-                        <i class="fa-solid fa-camera text-2xl text-tsu-blue"></i>
-                    </button>
-                </div>
-                <canvas id="camera-canvas" class="hidden"></canvas>
+    <!-- Camera Capture Modal -->
+    <div id="camera-modal" class="fixed inset-0 bg-black z-[130] hidden">
+        <div class="relative h-full flex flex-col">
+            <div class="absolute top-4 right-4 z-10">
+                <button id="close-camera-btn"
+                    class="text-white bg-red-500 rounded-full w-10 h-10 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
-        </div>
-
-        <!-- Right Side Mobile Menu Overlay -->
-        <div id="mobile-menu"
-            class="fixed inset-0 bg-stone-900/50 z-[200] hidden transition-opacity duration-300 opacity-0">
-            <div id="menu-panel"
-                class="absolute right-0 top-0 h-full w-64 bg-tsu-blue shadow-2xl translate-x-full transition-transform duration-300 ease-out flex flex-col border-l border-tsu-dark">
-                <div class="p-4 border-b border-tsu-dark bg-tsu-dark/40 flex items-center justify-between">
-                    <span class="font-black text-sm tracking-wider uppercase text-tsu-gold"><i
-                            class="fa-solid fa-house-user mr-2"></i>Civic Hub</span>
-                    <button onclick="toggleMobileMenu()" class="text-white hover:text-stone-300 p-1">
-                        <i class="fa-solid fa-xmark text-xl"></i>
-                    </button>
-                </div>
-                <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-                    <button onclick="switchTab('announcements'); toggleMobileMenu()"
-                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                        <i class="fa-solid fa-bullhorn w-5"></i><span>Announcements</span>
-                    </button>
-                    <button onclick="switchTab('events'); toggleMobileMenu()"
-                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                        <i class="fa-solid fa-calendar-days w-5"></i><span>Event Management</span>
-                    </button>
-                    <button onclick="switchTab('volunteers'); toggleMobileMenu()"
-                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                        <i class="fa-solid fa-hands-holding w-5"></i><span>Volunteer Registry</span>
-                    </button>
-                    <button onclick="switchTab('hours'); toggleMobileMenu()"
-                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                        <i class="fa-solid fa-circle-check w-5"></i><span>Service Hours</span>
-                    </button>
-                    <button onclick="switchTab('donations'); toggleMobileMenu()"
-                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                        <i class="fa-solid fa-hand-holding-dollar w-5"></i><span>Donation Hub</span>
-                    </button>
-                    <button onclick="switchTab('profile'); toggleMobileMenu()"
-                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
-                        <i class="fa-solid fa-user w-5"></i><span>User Profile</span>
-                    </button>
-                    <div class="pt-4 border-t border-tsu-dark mt-4">
-                        <button onclick="triggerLogoutConfirmation(); toggleMobileMenu()"
-                            class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-amber-400 hover:bg-tsu-dark/40">
-                            <i class="fa-solid fa-arrow-right-from-bracket w-5"></i><span>Sign Out</span>
-                        </button>
-                    </div>
-                </nav>
+            <video id="camera-video" class="w-full h-full object-cover" autoplay playsinline></video>
+            <div class="absolute bottom-8 left-0 right-0 flex justify-center">
+                <button id="capture-btn"
+                    class="bg-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg border-4 border-tsu-blue">
+                    <i class="fa-solid fa-camera text-2xl text-tsu-blue"></i>
+                </button>
             </div>
+            <canvas id="camera-canvas" class="hidden"></canvas>
         </div>
-    </div> <!-- ADD THIS CLOSING DIV HERE TO CLOSE THE AUTH-SCREEN -->
+    </div>
 
     <!-- Dashboard -->
     <div id="dashboard" class="hidden min-h-screen flex flex-col lg:flex-row">
@@ -392,7 +354,7 @@
                 <i class="fa-solid fa-house-user text-tsu-gold text-xl"></i>
                 <span class="font-black text-base tracking-wider uppercase text-tsu-gold">Civic Hub</span>
             </div>
-            <button onclick="toggleMobileMenu()" class="text-white focus:outline-none p-1">
+            <button onclick="window.toggleMobileMenu()" class="text-white focus:outline-none p-1">
                 <i class="fa-solid fa-bars text-2xl"></i>
             </button>
         </div>
@@ -661,6 +623,53 @@
                 </form>
             </section>
         </main>
+    </div>
+
+    <!-- Mobile Menu Overlay (MOVED OUTSIDE dashboard) -->
+    <div id="mobile-menu"
+        class="fixed inset-0 bg-stone-900/50 z-[200] hidden transition-opacity duration-300 opacity-0">
+        <div id="menu-panel"
+            class="absolute right-0 top-0 h-full w-64 bg-tsu-blue shadow-2xl translate-x-full transition-transform duration-300 ease-out flex flex-col border-l border-tsu-dark">
+            <div class="p-4 border-b border-tsu-dark bg-tsu-dark/40 flex items-center justify-between">
+                <span class="font-black text-sm tracking-wider uppercase text-tsu-gold"><i
+                        class="fa-solid fa-house-user mr-2"></i>Civic Hub</span>
+                <button onclick="window.toggleMobileMenu()" class="text-white hover:text-stone-300 p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+                <button onclick="switchTab('announcements'); window.toggleMobileMenu()"
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
+                    <i class="fa-solid fa-bullhorn w-5"></i><span>Announcements</span>
+                </button>
+                <button onclick="switchTab('events'); window.toggleMobileMenu()"
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
+                    <i class="fa-solid fa-calendar-days w-5"></i><span>Event Management</span>
+                </button>
+                <button onclick="switchTab('volunteers'); window.toggleMobileMenu()"
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
+                    <i class="fa-solid fa-hands-holding w-5"></i><span>Volunteer Registry</span>
+                </button>
+                <button onclick="switchTab('hours'); window.toggleMobileMenu()"
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
+                    <i class="fa-solid fa-circle-check w-5"></i><span>Service Hours</span>
+                </button>
+                <button onclick="switchTab('donations'); window.toggleMobileMenu()"
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
+                    <i class="fa-solid fa-hand-holding-dollar w-5"></i><span>Donation Hub</span>
+                </button>
+                <button onclick="switchTab('profile'); window.toggleMobileMenu()"
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
+                    <i class="fa-solid fa-user w-5"></i><span>User Profile</span>
+                </button>
+                <div class="pt-4 border-t border-tsu-dark mt-4">
+                    <button onclick="triggerLogoutConfirmation(); window.toggleMobileMenu()"
+                        class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm text-amber-400 hover:bg-tsu-dark/40">
+                        <i class="fa-solid fa-arrow-right-from-bracket w-5"></i><span>Sign Out</span>
+                    </button>
+                </div>
+            </nav>
+        </div>
     </div>
 
     <!-- Event Details Modal -->
