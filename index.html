@@ -389,6 +389,10 @@
                     <i class="fa-solid fa-hand-holding-dollar text-sm sm:text-base w-5"></i><span>Donation
                     </span>
                 </button>
+                <button onclick="switchTab('my-events')"
+                    class="nav-link w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
+                    <i class="fa-solid fa-calendar-check text-sm sm:text-base w-5"></i><span>My Events</span>
+                </button>
                 <button onclick="switchTab('profile')"
                     class="nav-link w-full flex items-center space-x-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium text-xs sm:text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
                     <i class="fa-solid fa-user text-sm sm:text-base w-5"></i><span>User Profile</span>
@@ -547,6 +551,16 @@
                 </div>
             </section>
 
+            <!-- My Events Tab -->
+            <section id="my-events" class="tab-content hidden">
+                <div class="border-b pb-3 sm:pb-4 mb-4 sm:mb-6">
+                    <h1 class="text-2xl sm:text-3xl font-black text-tsu-blue">
+                        <i class="fa-solid fa-calendar-check mr-2"></i>My Registered Events
+                    </h1>
+                </div>
+                <div id="my-events-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6"></div>
+            </section>
+
             <!-- Profile Tab -->
             <section id="profile" class="tab-content hidden w-full max-w-2xl mx-auto p-4 md:p-6">
                 <h2 class="text-2xl font-black text-tsu-blue mb-6">Resident Profile</h2>
@@ -656,6 +670,10 @@
                 <button onclick="switchTab('donations'); window.toggleMobileMenu()"
                     class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
                     <i class="fa-solid fa-hand-holding-dollar w-5"></i><span>Donation Hub</span>
+                </button>
+                <button onclick="switchTab('my-events'); toggleMobileMenu()"
+                    class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
+                    <i class="fa-solid fa-calendar-check w-5"></i><span>My Events</span>
                 </button>
                 <button onclick="switchTab('profile'); window.toggleMobileMenu()"
                     class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium text-sm transition-all text-stone-200 hover:bg-tsu-dark/50">
