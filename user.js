@@ -556,7 +556,7 @@ onSnapshot(
                     </p>
                     <button onclick="event.stopPropagation(); joinEvent('${id}', '${esc(ev.title)}')" 
                             class="mt-3 w-full bg-stone-50 border text-tsu-maroon font-bold py-2 rounded-xl text-sm hover:bg-tsu-maroon hover:text-tsu-gold transition-colors">
-                        Participate
+                        Join
                     </button>
                 </div>`;
         });
