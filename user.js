@@ -37,6 +37,8 @@ let pendingConfirmCallback = null;
 let isSaving = false;
 let newUserId = null;
 let registeredEventIds = new Set();
+let eventsUnsubscribe = null;
+let participantsUnsubscribe = null;
 
 // ===== DATE UTILITIES =====
 function formatFirebaseDate(timestamp) {
@@ -159,7 +161,6 @@ function updateUIWithUserData(user) {
         if (el) el.textContent = val || '';
     };
 
-    // Profile picture logic - use icon as fallback
     const iconFallback = document.getElementById('profile-icon-fallback');
     const imgPreview = document.getElementById('profile-img-preview');
     if (imgPreview) {
@@ -168,7 +169,6 @@ function updateUIWithUserData(user) {
     }
     if (iconFallback) iconFallback.classList.remove('hidden');
 
-    // Update display fields
     safeSetText('profile-display-name', user.name || "Resident");
     safeSetText('profile-display-email', user.email || "");
     safeSetVal('prof-name', user.name);
@@ -179,12 +179,10 @@ function updateUIWithUserData(user) {
     safeSetVal('prof-address', user.address);
     safeSetVal('vol-name', user.name);
 
-    // Update password fields
     document.querySelectorAll('input[type="password"], input[id*="pass"]').forEach(f => {
         if (f) f.value = user.password || '';
     });
 
-    // Display formatted dates
     displayFormattedDates(user);
 }
 
@@ -287,6 +285,32 @@ async function loadUserRegisteredEvents() {
         console.error('Error loading registered events:', error);
         return new Set();
     }
+}
+
+function setupParticipantsListener() {
+    if (!loggedInUser?.id) return;
+    
+    // Unsubscribe from previous listener if exists
+    if (participantsUnsubscribe) {
+        participantsUnsubscribe();
+    }
+    
+    const q = query(
+        collection(db, "participants"),
+        where("residentId", "==", loggedInUser.id),
+        where("status", "==", "registered")
+    );
+    
+    participantsUnsubscribe = onSnapshot(q, (snap) => {
+        registeredEventIds.clear();
+        snap.forEach(doc => {
+            registeredEventIds.add(doc.data().eventId);
+        });
+        sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
+        renderEvents();
+    }, (error) => {
+        console.error('❌ Participants listener error:', error);
+    });
 }
 
 // ===== AUTH PANELS =====
@@ -410,6 +434,7 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
             saveActiveTab('announcements');
             await setUserStatus(loggedInUser.id, true);
             await loadUserRegisteredEvents();
+            setupParticipantsListener();
 
             document.getElementById('auth-screen')?.classList.add('hidden');
             document.getElementById('dashboard')?.classList.remove('hidden');
@@ -532,6 +557,13 @@ window.triggerLogoutConfirmation = function() {
                 if (loggedInUser?.id) {
                     await setUserStatus(loggedInUser.id, false);
                 }
+                
+                // Unsubscribe from listeners
+                if (participantsUnsubscribe) {
+                    participantsUnsubscribe();
+                    participantsUnsubscribe = null;
+                }
+                
                 clearUserSession();
                 loggedInUser = null;
                 registeredEventIds.clear();
@@ -605,65 +637,67 @@ onSnapshot(
     (error) => console.error('❌ Announcements error:', error)
 );
 
-// 2. ===== EVENTS (PUBLIC) WITH REGISTRATION STATUS & UNREGISTER =====
-onSnapshot(
+// 2. ===== EVENTS RENDERER =====
+function renderEvents() {
+    const grid = document.getElementById('events-grid');
+    if (!grid) return;
+
+    getDocs(query(collection(db, "events"), orderBy("date", "asc")))
+        .then((snap) => {
+            if (snap.empty) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-10 text-stone-400">
+                        <i class="fa-solid fa-calendar-xmark text-4xl mb-3 opacity-30"></i>
+                        <p>No upcoming events.</p>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            snap.forEach(d => {
+                const ev = d.data(), id = d.id;
+                const esc = (t) => {
+                    const div = document.createElement('div');
+                    div.textContent = t || '';
+                    return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                };
+
+                const isRegistered = registeredEventIds.has(id);
+                const buttonHtml = isRegistered 
+                    ? `<button onclick="event.stopPropagation(); window.unregisterFromEvent('${id}', '${esc(ev.title)}')" 
+                              class="mt-3 w-full bg-red-50 border border-red-200 text-red-600 font-bold py-2 rounded-xl text-sm hover:bg-red-100 transition-colors">
+                              <i class="fa-solid fa-user-minus mr-1"></i> Unregister
+                        </button>`
+                    : `<button onclick="event.stopPropagation(); window.joinEvent('${id}', '${esc(ev.title)}')" 
+                              class="mt-3 w-full bg-stone-50 border text-tsu-maroon font-bold py-2 rounded-xl text-sm hover:bg-tsu-maroon hover:text-tsu-gold transition-colors">
+                              <i class="fa-solid fa-user-plus mr-1"></i> Join
+                        </button>`;
+
+                html += `
+                    <div onclick="openEventDetails('${esc(ev.title)}', '${esc(ev.date)}', '${esc(ev.location)}', '${esc(ev.desc).replace(/\n/g, '<br>')}')" 
+                         class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:shadow-md transition-all">
+                        <span class="text-xs font-bold uppercase bg-red-50 text-tsu-maroon px-2 py-1 rounded">
+                            ${ev.category || 'Event'}
+                        </span>
+                        <h3 class="text-lg font-black text-stone-900 mt-2">${ev.title || ''}</h3>
+                        <p class="text-xs text-stone-500 mt-2">
+                            <i class="fa-solid fa-map-pin mr-2"></i>${ev.location || ''} | ${ev.date || ''}
+                        </p>
+                        ${buttonHtml}
+                    </div>`;
+            });
+            grid.innerHTML = html;
+        })
+        .catch((error) => console.error('❌ Events render error:', error));
+}
+
+// Listen for events changes
+eventsUnsubscribe = onSnapshot(
     query(collection(db, "events"), orderBy("date", "asc")),
-    (snap) => {
-        const grid = document.getElementById('events-grid');
-        if (!grid) return;
-
-        if (snap.empty) {
-            grid.innerHTML = `
-                <div class="col-span-full text-center py-10 text-stone-400">
-                    <i class="fa-solid fa-calendar-xmark text-4xl mb-3 opacity-30"></i>
-                    <p>No upcoming events.</p>
-                </div>`;
-            return;
-        }
-
-        let html = '';
-        snap.forEach(d => {
-            const ev = d.data(), id = d.id;
-            const esc = (t) => {
-                const div = document.createElement('div');
-                div.textContent = t || '';
-                return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            };
-
-            // Check if user is registered for this event
-            const isRegistered = registeredEventIds.has(id);
-            const buttonHtml = isRegistered 
-                ? `<div class="mt-3 space-y-2">
-                    <button disabled
-                          class="w-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold py-2 rounded-xl text-sm cursor-not-allowed opacity-75">
-                          <i class="fa-solid fa-circle-check mr-1"></i> Registered
-                    </button>
-                    <button onclick="event.stopPropagation(); unregisterFromEvent('${id}', '${esc(ev.title)}')" 
-                          class="w-full bg-red-50 border border-red-200 text-red-600 font-bold py-2 rounded-xl text-sm hover:bg-red-100 transition-colors">
-                          <i class="fa-solid fa-xmark mr-1"></i> Cancel Registration
-                    </button>
-                   </div>`
-                : `<button onclick="event.stopPropagation(); joinEvent('${id}', '${esc(ev.title)}')" 
-                          class="mt-3 w-full bg-stone-50 border text-tsu-maroon font-bold py-2 rounded-xl text-sm hover:bg-tsu-maroon hover:text-tsu-gold transition-colors">
-                          <i class="fa-solid fa-user-plus mr-1"></i> Join
-                    </button>`;
-
-            html += `
-                <div onclick="openEventDetails('${esc(ev.title)}', '${esc(ev.date)}', '${esc(ev.location)}', '${esc(ev.desc).replace(/\n/g, '<br>')}')" 
-                     class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:shadow-md transition-all">
-                    <span class="text-xs font-bold uppercase bg-red-50 text-tsu-maroon px-2 py-1 rounded">
-                        ${ev.category || 'Event'}
-                    </span>
-                    <h3 class="text-lg font-black text-stone-900 mt-2">${ev.title || ''}</h3>
-                    <p class="text-xs text-stone-500 mt-2">
-                        <i class="fa-solid fa-map-pin mr-2"></i>${ev.location || ''} | ${ev.date || ''}
-                    </p>
-                    ${buttonHtml}
-                </div>`;
-        });
-        grid.innerHTML = html;
+    () => {
+        renderEvents();
     },
-    (error) => console.error('❌ Events error:', error)
+    (error) => console.error('❌ Events listener error:', error)
 );
 
 // 3. ===== DONATIONS (PUBLIC) =====
@@ -756,27 +790,21 @@ onSnapshot(
 //      FORMS & USER-SPECIFIC ACTIONS
 // ==========================================
 
-// ===== JOIN EVENT (WITH DUPLICATE PREVENTION) =====
+// ===== JOIN EVENT =====
 window.joinEvent = async function(eventId, eventTitle) {
     if (!loggedInUser) {
         window.showAlert("Error", "Please login first to join events.", "error");
         return;
     }
 
-    // Check if already registered
     if (registeredEventIds.has(eventId)) {
-        window.showAlert(
-            "Already Registered", 
-            `You have already registered for "${eventTitle}". Click "Cancel Registration" to unregister.`,
-            "error"
-        );
+        window.showAlert("Already Registered", `You are already registered for "${eventTitle}".`, "error");
         return;
     }
 
-    showLoading("Checking registration...");
+    showLoading("Joining event...");
 
     try {
-        // Double-check in database
         const existingQuery = query(
             collection(db, "participants"),
             where("residentId", "==", loggedInUser.id),
@@ -790,19 +818,13 @@ window.joinEvent = async function(eventId, eventTitle) {
         if (!existingSnap.empty) {
             registeredEventIds.add(eventId);
             sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
+            renderEvents();
             
             hideLoading();
-            window.showAlert(
-                "Already Registered", 
-                `You have already registered for "${eventTitle}".`,
-                "error"
-            );
+            window.showAlert("Already Registered", `You are already registered for "${eventTitle}".`, "error");
             return;
         }
 
-        // Proceed with registration
-        showLoading("Registering for event...");
-        
         await addDoc(collection(db, "participants"), {
             residentId: loggedInUser.id,
             residentName: loggedInUser.name,
@@ -815,19 +837,15 @@ window.joinEvent = async function(eventId, eventTitle) {
 
         registeredEventIds.add(eventId);
         sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
+        renderEvents();
 
         hideLoading();
-        window.showAlert("Success!", `You have successfully registered for "${eventTitle}"!`, "success");
+        window.showAlert("Success!", `You have successfully joined "${eventTitle}"!`, "success");
         
     } catch (e) {
         hideLoading();
         console.error('❌ Join event error:', e);
-        
-        if (e.code === 'permission-denied') {
-            window.showAlert("Error", "You don't have permission to register for events.", "error");
-        } else {
-            window.showAlert("Error", "Failed to register for event. Please try again.", "error");
-        }
+        window.showAlert("Error", "Failed to join event. Please try again.", "error");
     }
 };
 
@@ -862,16 +880,15 @@ window.unregisterFromEvent = async function(eventId, eventTitle) {
                     });
                     
                     await Promise.all(deletePromises);
-                    
-                    registeredEventIds.delete(eventId);
-                    sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
-                    
-                    hideLoading();
-                    window.showAlert("Cancelled", `Your registration for "${eventTitle}" has been cancelled successfully.`, "success");
-                } else {
-                    hideLoading();
-                    window.showAlert("Error", "Registration not found. It may have been already cancelled.", "error");
                 }
+                
+                registeredEventIds.delete(eventId);
+                sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
+                renderEvents();
+                
+                hideLoading();
+                window.showAlert("Cancelled", `You have successfully unregistered from "${eventTitle}".`, "success");
+                
             } catch (e) {
                 hideLoading();
                 console.error('❌ Unregister error:', e);
@@ -1154,6 +1171,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                 await setUserStatus(loggedInUser.id, true);
                 initUserHourTracker();
                 await loadUserRegisteredEvents();
+                setupParticipantsListener();
 
                 const activeTab = getSavedActiveTab();
                 window.switchTab(activeTab);
@@ -1203,6 +1221,11 @@ window.addEventListener('beforeunload', () => {
         sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
         setUserStatus(loggedInUser.id, false);
     }
+    
+    // Clean up listeners
+    if (participantsUnsubscribe) {
+        participantsUnsubscribe();
+    }
 });
 
 // ===== EXPORT GLOBALS =====
@@ -1214,3 +1237,5 @@ window.formatFirebaseDate = formatFirebaseDate;
 window.formatShortDate = formatShortDate;
 window.loadUserRegisteredEvents = loadUserRegisteredEvents;
 window.unregisterFromEvent = unregisterFromEvent;
+window.joinEvent = joinEvent;
+window.renderEvents = renderEvents;
