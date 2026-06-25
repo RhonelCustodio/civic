@@ -1,5 +1,4 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-// REMOVED: Duplicate getAuth import (not used anyway)
 import { 
     getFirestore, 
     collection, 
@@ -12,7 +11,9 @@ import {
     getDocs, 
     getDoc, 
     where, 
-    limit 
+    limit,
+    serverTimestamp,
+    deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // ===== FIREBASE INITIALIZATION =====
@@ -35,11 +36,49 @@ let alertTimeout = null;
 let pendingConfirmCallback = null;
 let isSaving = false;
 let newUserId = null;
+let registeredEventIds = new Set();
+
+// ===== DATE UTILITIES =====
+function formatFirebaseDate(timestamp) {
+    if (!timestamp) return 'N/A';
+    
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    
+    const options = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    };
+    
+    return date.toLocaleDateString('en-US', options);
+}
+
+function formatShortDate(timestamp) {
+    if (!timestamp) return 'N/A';
+    
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    
+    const options = { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric'
+    };
+    
+    return date.toLocaleDateString('en-US', options);
+}
 
 // ===== SESSION MANAGEMENT =====
 function saveUserSession(userData) {
     try {
-        localStorage.setItem('barangayUser', JSON.stringify(userData));
+        const sessionData = {
+            ...userData,
+            createdAt: userData.createdAt?.toDate ? userData.createdAt.toDate().toISOString() : userData.createdAt,
+            lastActive: userData.lastActive?.toDate ? userData.lastActive.toDate().toISOString() : userData.lastActive
+        };
+        localStorage.setItem('barangayUser', JSON.stringify(sessionData));
     } catch (e) {
         console.error('Failed to save session:', e);
     }
@@ -49,6 +88,7 @@ function clearUserSession() {
     try {
         localStorage.removeItem('barangayUser');
         sessionStorage.removeItem('userActiveTab');
+        sessionStorage.removeItem('registeredEvents');
     } catch (e) {
         console.error('Failed to clear session:', e);
     }
@@ -143,6 +183,23 @@ function updateUIWithUserData(user) {
     document.querySelectorAll('input[type="password"], input[id*="pass"]').forEach(f => {
         if (f) f.value = user.password || '';
     });
+
+    // Display formatted dates
+    displayFormattedDates(user);
+}
+
+function displayFormattedDates(user) {
+    const createdDate = formatFirebaseDate(user.createdAt);
+    const lastActiveDate = formatFirebaseDate(user.lastActive);
+    
+    console.log('📅 Account created:', createdDate);
+    console.log('🕐 Last active:', lastActiveDate);
+    
+    const createdEl = document.getElementById('profile-created-date');
+    const activeEl = document.getElementById('profile-last-active');
+    
+    if (createdEl) createdEl.textContent = `Member since: ${createdDate}`;
+    if (activeEl) activeEl.textContent = `Last active: ${lastActiveDate}`;
 }
 
 // ===== ALERT SYSTEM =====
@@ -198,10 +255,37 @@ async function setUserStatus(userId, status) {
     try {
         await updateDoc(doc(db, "residents", userId), {
             isOnline: status,
-            lastActive: Date.now()
+            lastActive: serverTimestamp()
         });
     } catch (e) {
         console.error('Failed to update user status:', e);
+    }
+}
+
+async function loadUserRegisteredEvents() {
+    if (!loggedInUser?.id) return;
+    
+    try {
+        const q = query(
+            collection(db, "participants"),
+            where("residentId", "==", loggedInUser.id),
+            where("status", "==", "registered")
+        );
+        
+        const snap = await getDocs(q);
+        registeredEventIds.clear();
+        
+        snap.forEach(doc => {
+            registeredEventIds.add(doc.data().eventId);
+        });
+        
+        sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
+        
+        console.log('📋 Loaded registered events:', registeredEventIds.size);
+        return registeredEventIds;
+    } catch (error) {
+        console.error('Error loading registered events:', error);
+        return new Set();
     }
 }
 
@@ -272,8 +356,8 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
             password: pass,
             isOnline: false,
             profilePic: "", 
-            createdAt: Date.now(),
-            lastActive: Date.now(),
+            createdAt: serverTimestamp(),
+            lastActive: serverTimestamp(),
             role: "resident"
         };
 
@@ -283,7 +367,7 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
         hideLoading();
         document.getElementById('register-form')?.reset();
         
-        window.showAlert("Success!", "Account created successfully!", "success");
+        window.showAlert("Success!", "Account created successfully! You can now login.", "success");
         window.toggleAuthPanels(false);
         newUserId = null;
 
@@ -325,6 +409,7 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
             saveUserSession(loggedInUser);
             saveActiveTab('announcements');
             await setUserStatus(loggedInUser.id, true);
+            await loadUserRegisteredEvents();
 
             document.getElementById('auth-screen')?.classList.add('hidden');
             document.getElementById('dashboard')?.classList.remove('hidden');
@@ -389,7 +474,7 @@ if (profileForm) {
                 gender,
                 address,
                 password,
-                lastProfileUpdate: Date.now()
+                lastProfileUpdate: serverTimestamp()
             };
 
             await updateDoc(doc(db, "residents", loggedInUser.id), updateData);
@@ -449,13 +534,14 @@ window.triggerLogoutConfirmation = function() {
                 }
                 clearUserSession();
                 loggedInUser = null;
+                registeredEventIds.clear();
                 
                 document.getElementById('auth-screen')?.classList.remove('hidden');
                 document.getElementById('dashboard')?.classList.add('hidden');
                 document.getElementById('login-form')?.reset();
                 
                 hideLoading();
-                window.showAlert("Goodbye!", "You have been logged out.", "success");
+                window.showAlert("Goodbye!", "You have been logged out successfully.", "success");
             } catch (err) {
                 hideLoading();
                 console.error('Logout error:', err);
@@ -519,7 +605,7 @@ onSnapshot(
     (error) => console.error('❌ Announcements error:', error)
 );
 
-// 2. ===== EVENTS (PUBLIC) =====
+// 2. ===== EVENTS (PUBLIC) WITH REGISTRATION STATUS & UNREGISTER =====
 onSnapshot(
     query(collection(db, "events"), orderBy("date", "asc")),
     (snap) => {
@@ -544,6 +630,24 @@ onSnapshot(
                 return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             };
 
+            // Check if user is registered for this event
+            const isRegistered = registeredEventIds.has(id);
+            const buttonHtml = isRegistered 
+                ? `<div class="mt-3 space-y-2">
+                    <button disabled
+                          class="w-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold py-2 rounded-xl text-sm cursor-not-allowed opacity-75">
+                          <i class="fa-solid fa-circle-check mr-1"></i> Registered
+                    </button>
+                    <button onclick="event.stopPropagation(); unregisterFromEvent('${id}', '${esc(ev.title)}')" 
+                          class="w-full bg-red-50 border border-red-200 text-red-600 font-bold py-2 rounded-xl text-sm hover:bg-red-100 transition-colors">
+                          <i class="fa-solid fa-xmark mr-1"></i> Cancel Registration
+                    </button>
+                   </div>`
+                : `<button onclick="event.stopPropagation(); joinEvent('${id}', '${esc(ev.title)}')" 
+                          class="mt-3 w-full bg-stone-50 border text-tsu-maroon font-bold py-2 rounded-xl text-sm hover:bg-tsu-maroon hover:text-tsu-gold transition-colors">
+                          <i class="fa-solid fa-user-plus mr-1"></i> Join
+                    </button>`;
+
             html += `
                 <div onclick="openEventDetails('${esc(ev.title)}', '${esc(ev.date)}', '${esc(ev.location)}', '${esc(ev.desc).replace(/\n/g, '<br>')}')" 
                      class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:shadow-md transition-all">
@@ -554,10 +658,7 @@ onSnapshot(
                     <p class="text-xs text-stone-500 mt-2">
                         <i class="fa-solid fa-map-pin mr-2"></i>${ev.location || ''} | ${ev.date || ''}
                     </p>
-                    <button onclick="event.stopPropagation(); joinEvent('${id}', '${esc(ev.title)}')" 
-                            class="mt-3 w-full bg-stone-50 border text-tsu-maroon font-bold py-2 rounded-xl text-sm hover:bg-tsu-maroon hover:text-tsu-gold transition-colors">
-                        Join
-                    </button>
+                    ${buttonHtml}
                 </div>`;
         });
         grid.innerHTML = html;
@@ -635,7 +736,7 @@ onSnapshot(
                         <td class="px-4 py-3 font-bold text-stone-900">${data.name || 'Resident'}</td>
                         <td class="px-4 py-3 text-stone-600">${data.skills || 'General Help'}</td>
                         <td class="px-4 py-3">
-                            <span class="text-xs px-2 py-0.5 rounded-full font-bold ${data.status === 'Approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                            <span class="text-xs px-2 py-0.5 rounded-full font-bold ${data.status === 'Approved' || data.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
                                 ${data.status || 'Pending'}
                             </span>
                         </td>
@@ -655,32 +756,129 @@ onSnapshot(
 //      FORMS & USER-SPECIFIC ACTIONS
 // ==========================================
 
-// ===== JOIN EVENT =====
+// ===== JOIN EVENT (WITH DUPLICATE PREVENTION) =====
 window.joinEvent = async function(eventId, eventTitle) {
     if (!loggedInUser) {
         window.showAlert("Error", "Please login first to join events.", "error");
         return;
     }
 
-    showLoading("Registering for event...");
+    // Check if already registered
+    if (registeredEventIds.has(eventId)) {
+        window.showAlert(
+            "Already Registered", 
+            `You have already registered for "${eventTitle}". Click "Cancel Registration" to unregister.`,
+            "error"
+        );
+        return;
+    }
+
+    showLoading("Checking registration...");
 
     try {
+        // Double-check in database
+        const existingQuery = query(
+            collection(db, "participants"),
+            where("residentId", "==", loggedInUser.id),
+            where("eventId", "==", eventId),
+            where("status", "==", "registered"),
+            limit(1)
+        );
+        
+        const existingSnap = await getDocs(existingQuery);
+        
+        if (!existingSnap.empty) {
+            registeredEventIds.add(eventId);
+            sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
+            
+            hideLoading();
+            window.showAlert(
+                "Already Registered", 
+                `You have already registered for "${eventTitle}".`,
+                "error"
+            );
+            return;
+        }
+
+        // Proceed with registration
+        showLoading("Registering for event...");
+        
         await addDoc(collection(db, "participants"), {
             residentId: loggedInUser.id,
             residentName: loggedInUser.name,
             residentEmail: loggedInUser.email,
             eventTitle,
             eventId,
-            timestamp: Date.now()
+            timestamp: serverTimestamp(),
+            status: 'registered'
         });
 
+        registeredEventIds.add(eventId);
+        sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
+
         hideLoading();
-        window.showAlert("Success!", `You have registered for "${eventTitle}"!`, "success");
+        window.showAlert("Success!", `You have successfully registered for "${eventTitle}"!`, "success");
+        
     } catch (e) {
         hideLoading();
         console.error('❌ Join event error:', e);
-        window.showAlert("Error", "Failed to register for event. Please try again.", "error");
+        
+        if (e.code === 'permission-denied') {
+            window.showAlert("Error", "You don't have permission to register for events.", "error");
+        } else {
+            window.showAlert("Error", "Failed to register for event. Please try again.", "error");
+        }
     }
+};
+
+// ===== UNREGISTER FROM EVENT =====
+window.unregisterFromEvent = async function(eventId, eventTitle) {
+    if (!loggedInUser) {
+        window.showAlert("Error", "Please login first.", "error");
+        return;
+    }
+
+    window.showConfirmPopup(
+        "Cancel Registration?",
+        `Are you sure you want to cancel your registration for "${eventTitle}"?`,
+        async () => {
+            showLoading("Cancelling registration...");
+            
+            try {
+                const existingQuery = query(
+                    collection(db, "participants"),
+                    where("residentId", "==", loggedInUser.id),
+                    where("eventId", "==", eventId),
+                    where("status", "==", "registered"),
+                    limit(1)
+                );
+                
+                const existingSnap = await getDocs(existingQuery);
+                
+                if (!existingSnap.empty) {
+                    const deletePromises = [];
+                    existingSnap.forEach((document) => {
+                        deletePromises.push(deleteDoc(doc(db, "participants", document.id)));
+                    });
+                    
+                    await Promise.all(deletePromises);
+                    
+                    registeredEventIds.delete(eventId);
+                    sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
+                    
+                    hideLoading();
+                    window.showAlert("Cancelled", `Your registration for "${eventTitle}" has been cancelled successfully.`, "success");
+                } else {
+                    hideLoading();
+                    window.showAlert("Error", "Registration not found. It may have been already cancelled.", "error");
+                }
+            } catch (e) {
+                hideLoading();
+                console.error('❌ Unregister error:', e);
+                window.showAlert("Error", "Failed to cancel registration. Please try again.", "error");
+            }
+        }
+    );
 };
 
 // ===== VOLUNTEER SUBMISSION =====
@@ -709,12 +907,12 @@ document.getElementById('volunteer-form')?.addEventListener('submit', async (e) 
             email: loggedInUser.email,
             skills,
             availability,
-            createdAt: Date.now(),
+            createdAt: serverTimestamp(),
             status: 'pending'
         });
 
         hideLoading();
-        window.showAlert("Success!", "Thank you for volunteering!", "success");
+        window.showAlert("Success!", "Thank you for volunteering! Your application is pending approval.", "success");
         document.getElementById('volunteer-form')?.reset();
     } catch (err) {
         hideLoading();
@@ -748,12 +946,12 @@ document.getElementById('donation-form')?.addEventListener('submit', async (e) =
             donorId: loggedInUser.id,
             item,
             purpose,
-            createdAt: Date.now(),
+            createdAt: serverTimestamp(),
             status: 'pending'
         });
 
         hideLoading();
-        window.showAlert("Success!", "Donation reported successfully!", "success");
+        window.showAlert("Success!", "Donation reported successfully! Thank you for your contribution.", "success");
         document.getElementById('donation-form')?.reset();
     } catch (err) {
         hideLoading();
@@ -762,40 +960,33 @@ document.getElementById('donation-form')?.addEventListener('submit', async (e) =
     }
 });
 
-// ===== USER HOUR TRACKER (FIXED) =====
+// ===== USER HOUR TRACKER =====
 function initUserHourTracker() {
-    // Safety check: Do not run if the user is not logged in
     if (!loggedInUser || !loggedInUser.id) {
         console.warn("User ID not available for hour tracker.");
         return;
     }
 
-    // Query only the service hours for the CURRENT resident
     const q = query(
         collection(db, "service_hours"), 
         where("residentId", "==", loggedInUser.id)
     );
 
-    // Use onSnapshot for real-time updates
     onSnapshot(q, (snapshot) => {
         const tbody = document.getElementById('user-hours-tbody');
         const display = document.getElementById('total-hours-display');
         
         if (!tbody || !display) return;
         
-        // Clear existing data to prevent duplicates
         tbody.innerHTML = '';
         let total = 0;
 
-        // Process the data
         snapshot.forEach((doc) => {
             const data = doc.data();
             
-            // Only count if status is "Approved"
             if (data.status === "Approved") {
                 total += parseFloat(data.hours || 0);
                 
-                // Append row to the table
                 tbody.innerHTML += `
                     <tr class="border-b border-stone-100">
                         <td class="px-4 py-3">${data.eventTitle || 'N/A'}</td>
@@ -805,14 +996,16 @@ function initUserHourTracker() {
             }
         });
 
-        // Update the total hours display
+        if (!tbody.innerHTML) {
+            tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-stone-400">No approved service records yet.</td></tr>';
+        }
+
         display.innerText = total.toFixed(1);
     }, (error) => {
         console.error('❌ User hours tracker error:', error);
     });
 }
 
-// Make it available globally
 window.initUserHourTracker = initUserHourTracker;
 
 // ===== UI NAV & MODAL HANDLING =====
@@ -943,12 +1136,24 @@ window.addEventListener('DOMContentLoaded', async () => {
             
             if (snap.exists()) {
                 loggedInUser = { id: snap.id, ...snap.data() };
+                
+                const savedEvents = sessionStorage.getItem('registeredEvents');
+                if (savedEvents) {
+                    try {
+                        const eventsArray = JSON.parse(savedEvents);
+                        registeredEventIds = new Set(eventsArray);
+                    } catch (e) {
+                        registeredEventIds = new Set();
+                    }
+                }
+                
                 document.getElementById('auth-screen')?.classList.add('hidden');
                 document.getElementById('dashboard')?.classList.remove('hidden');
                 
                 updateUIWithUserData(loggedInUser);
                 await setUserStatus(loggedInUser.id, true);
                 initUserHourTracker();
+                await loadUserRegisteredEvents();
 
                 const activeTab = getSavedActiveTab();
                 window.switchTab(activeTab);
@@ -962,8 +1167,18 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         } catch (error) {
             console.error('❌ Session restore error:', error);
-            // Fallback: use saved data offline
             loggedInUser = savedUser;
+            
+            const savedEvents = sessionStorage.getItem('registeredEvents');
+            if (savedEvents) {
+                try {
+                    const eventsArray = JSON.parse(savedEvents);
+                    registeredEventIds = new Set(eventsArray);
+                } catch (e) {
+                    registeredEventIds = new Set();
+                }
+            }
+            
             document.getElementById('auth-screen')?.classList.add('hidden');
             document.getElementById('dashboard')?.classList.remove('hidden');
             updateUIWithUserData(loggedInUser);
@@ -985,6 +1200,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 // ===== CLEANUP ON UNLOAD =====
 window.addEventListener('beforeunload', () => {
     if (loggedInUser?.id) {
+        sessionStorage.setItem('registeredEvents', JSON.stringify([...registeredEventIds]));
         setUserStatus(loggedInUser.id, false);
     }
 });
@@ -994,3 +1210,7 @@ window.showLoading = showLoading;
 window.hideLoading = hideLoading;
 window.toggleMobileMenu = toggleMobileMenu;
 window.triggerLogoutConfirmation = window.triggerLogoutConfirmation;
+window.formatFirebaseDate = formatFirebaseDate;
+window.formatShortDate = formatShortDate;
+window.loadUserRegisteredEvents = loadUserRegisteredEvents;
+window.unregisterFromEvent = unregisterFromEvent;
