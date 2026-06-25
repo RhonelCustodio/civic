@@ -690,15 +690,129 @@ function renderEvents() {
         })
         .catch((error) => console.error('❌ Events render error:', error));
 }
+// ===== MY EVENTS RENDERER =====
+function renderMyEvents() {
+    const grid = document.getElementById('my-events-grid');
+    if (!grid) return;
 
-// Listen for events changes
-eventsUnsubscribe = onSnapshot(
-    query(collection(db, "events"), orderBy("date", "asc")),
-    () => {
-        renderEvents();
-    },
-    (error) => console.error('❌ Events listener error:', error)
-);
+    // If user not logged in or no registered events
+    if (!loggedInUser || registeredEventIds.size === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full text-center py-10 text-stone-400">
+                <i class="fa-solid fa-calendar-xmark text-4xl mb-3 opacity-30"></i>
+                <p>You haven't registered for any events yet.</p>
+                <p class="text-xs mt-2">Browse events and click "Join" to register.</p>
+            </div>`;
+        return;
+    }
+
+    showLoading("Loading your events...");
+
+    // Get all events and filter to only show registered ones
+    getDocs(query(collection(db, "events"), orderBy("date", "asc")))
+        .then((snap) => {
+            let html = '';
+            let foundEvents = false;
+
+            snap.forEach(d => {
+                const ev = d.data(), id = d.id;
+                
+                // Only show events the user is registered for
+                if (!registeredEventIds.has(id)) return;
+                
+                foundEvents = true;
+                
+                const esc = (t) => {
+                    const div = document.createElement('div');
+                    div.textContent = t || '';
+                    return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                };
+
+                html += `
+                    <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-emerald-500">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase bg-red-50 text-tsu-maroon px-2 py-1 rounded">
+                                ${ev.category || 'Event'}
+                            </span>
+                            <span class="text-xs bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full font-bold">
+                                <i class="fa-solid fa-circle-check mr-1"></i>Registered
+                            </span>
+                        </div>
+                        <h3 class="text-lg font-black text-stone-900 mt-2">${ev.title || ''}</h3>
+                        <p class="text-xs text-stone-500 mt-2">
+                            <i class="fa-solid fa-map-pin mr-2"></i>${ev.location || ''} | ${ev.date || ''}
+                        </p>
+                        <p class="text-xs text-stone-600 mt-2 line-clamp-2">${ev.desc || 'No description available.'}</p>
+                        <div class="mt-4 flex space-x-2">
+                            <button onclick="openEventDetails('${esc(ev.title)}', '${esc(ev.date)}', '${esc(ev.location)}', '${esc(ev.desc).replace(/\n/g, '<br>')}')" 
+                                    class="flex-1 bg-stone-50 border text-stone-700 font-bold py-2 rounded-xl text-xs hover:bg-stone-100 transition-colors">
+                                <i class="fa-solid fa-info-circle mr-1"></i> View Details
+                            </button>
+                            <button onclick="event.stopPropagation(); window.unregisterFromEvent('${id}', '${esc(ev.title)}')" 
+                                    class="flex-1 bg-red-50 border border-red-200 text-red-600 font-bold py-2 rounded-xl text-xs hover:bg-red-100 transition-colors">
+                                <i class="fa-solid fa-user-minus mr-1"></i> Unregister
+                            </button>
+                        </div>
+                    </div>`;
+            });
+
+            if (!foundEvents) {
+                html = `
+                    <div class="col-span-full text-center py-10 text-stone-400">
+                        <i class="fa-solid fa-calendar-xmark text-4xl mb-3 opacity-30"></i>
+                        <p>You haven't registered for any events yet.</p>
+                        <p class="text-xs mt-2">Browse events and click "Join" to register.</p>
+                    </div>`;
+            }
+
+            grid.innerHTML = html;
+            hideLoading();
+        })
+        .catch((error) => {
+            console.error('❌ My Events render error:', error);
+            grid.innerHTML = `
+                <div class="col-span-full text-center py-10 text-stone-400">
+                    <i class="fa-solid fa-triangle-exclamation text-4xl mb-3 opacity-30"></i>
+                    <p>Failed to load your events. Please try again.</p>
+                </div>`;
+            hideLoading();
+        });
+}
+
+// Update renderEvents to also refresh My Events
+const originalRenderEvents = renderEvents;
+renderEvents = function() {
+    originalRenderEvents();
+    if (loggedInUser) {
+        renderMyEvents();
+    }
+};
+
+// Update joinEvent to also refresh My Events
+const originalJoinEvent = window.joinEvent;
+window.joinEvent = async function(eventId, eventTitle) {
+    await originalJoinEvent(eventId, eventTitle);
+    renderMyEvents();
+};
+
+// Update unregisterFromEvent to also refresh My Events
+const originalUnregisterFromEvent = window.unregisterFromEvent;
+window.unregisterFromEvent = async function(eventId, eventTitle) {
+    await originalUnregisterFromEvent(eventId, eventTitle);
+    renderMyEvents();
+};
+
+// Update switchTab to refresh My Events when switching to it
+const originalSwitchTab = window.switchTab;
+window.switchTab = function(tabId) {
+    originalSwitchTab(tabId);
+    if (tabId === 'my-events') {
+        renderMyEvents();
+    }
+};
+
+// Make renderMyEvents available globally
+window.renderMyEvents = renderMyEvents;
 
 // 3. ===== DONATIONS (PUBLIC) =====
 onSnapshot(
