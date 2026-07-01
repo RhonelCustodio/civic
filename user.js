@@ -13,8 +13,20 @@ import {
     where, 
     limit,
     serverTimestamp,
-    deleteDoc
+    deleteDoc,
+    setDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// ===== FIREBASE AUTH IMPORT =====
+import {
+    getAuth,
+    createUserWithEmailAndPassword,
+    sendEmailVerification,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    updatePassword
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 // ===== FIREBASE INITIALIZATION =====
 const firebaseConfig = {
@@ -29,13 +41,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app); // Initialized Firebase Auth
 
 // ===== GLOBAL STATE =====
 let loggedInUser = null;
 let alertTimeout = null;
 let pendingConfirmCallback = null;
 let isSaving = false;
-let newUserId = null;
 let registeredEventIds = new Set();
 let completedEventIds = new Set();
 let eventsUnsubscribe = null;
@@ -45,13 +57,8 @@ let currentDonationData = null;
 let isTabSwitching = false;
 
 // ===== TIME UTILITY FUNCTIONS =====
-/**
- * Format time from HH:MM to 12-hour format with AM/PM
- */
 function formatTimeDisplay(timeValue) {
     if (!timeValue) return '';
-    
-    // If time is in HH:MM format
     if (typeof timeValue === 'string' && timeValue.includes(':')) {
         const [hours, minutes] = timeValue.split(':');
         const h = parseInt(hours);
@@ -59,20 +66,14 @@ function formatTimeDisplay(timeValue) {
         const displayHour = h % 12 || 12;
         return `${displayHour}:${minutes} ${ampm}`;
     }
-    
     return timeValue;
 }
 
-/**
- * Format date and time for event card display
- */
 function formatEventDateTime(dateValue, timeValue) {
     let display = dateValue || 'TBA';
-    
     if (timeValue) {
         display += ` | ${formatTimeDisplay(timeValue)}`;
     }
-    
     return display;
 }
 
@@ -102,7 +103,8 @@ const PAYMENT_API = {
 // ===== PAYMENT PROCESSING FUNCTIONS =====
 window.selectPaymentMethod = function(method) {
     selectedPaymentMethod = method;
-    document.getElementById('selected-payment-method').value = method;
+    const selectedPaymentInput = document.getElementById('selected-payment-method');
+    if (selectedPaymentInput) selectedPaymentInput.value = method;
     
     document.querySelectorAll('.payment-method-btn').forEach(btn => {
         btn.classList.remove('selected');
@@ -115,12 +117,11 @@ window.selectPaymentMethod = function(method) {
     
     const qrContainer = document.getElementById('qr-code-container');
     if (method === 'gcash' || method === 'paymaya') {
-        qrContainer.classList.remove('hidden');
+        if (qrContainer) qrContainer.classList.remove('hidden');
         generateQRCode(method);
     } else {
-        qrContainer.classList.add('hidden');
+        if (qrContainer) qrContainer.classList.add('hidden');
     }
-    
     console.log('💳 Payment method selected:', method);
 };
 
@@ -157,7 +158,6 @@ function generateQRCode(method) {
                 </div>
             </div>`;
     }
-    
     qrPlaceholder.innerHTML = qrContent;
 }
 
@@ -174,17 +174,24 @@ window.openPaymentModal = function(item, purpose) {
         donorId: loggedInUser.id
     };
     
-    document.getElementById('payment-item').textContent = item;
-    document.getElementById('payment-purpose').textContent = purpose;
-    document.getElementById('payment-donor-name').value = loggedInUser.name;
+    const paymentItem = document.getElementById('payment-item');
+    const paymentPurpose = document.getElementById('payment-purpose');
+    const paymentDonorName = document.getElementById('payment-donor-name');
+    const selectedPaymentMethodInput = document.getElementById('selected-payment-method');
+    const qrCodeContainer = document.getElementById('qr-code-container');
+    const donationAmountInput = document.getElementById('donation-amount');
+
+    if (paymentItem) paymentItem.textContent = item;
+    if (paymentPurpose) paymentPurpose.textContent = purpose;
+    if (paymentDonorName) paymentDonorName.value = loggedInUser.name;
     
     selectedPaymentMethod = null;
-    document.getElementById('selected-payment-method').value = '';
+    if (selectedPaymentMethodInput) selectedPaymentMethodInput.value = '';
     document.querySelectorAll('.payment-method-btn').forEach(btn => {
         btn.classList.remove('selected');
     });
-    document.getElementById('qr-code-container').classList.add('hidden');
-    document.getElementById('donation-amount').value = '';
+    if (qrCodeContainer) qrCodeContainer.classList.add('hidden');
+    if (donationAmountInput) donationAmountInput.value = '';
     
     window.toggleModal('payment-modal');
 };
@@ -198,27 +205,22 @@ window.processPayment = async function() {
         window.showAlert("Error", "Please select a payment method.", "error");
         return;
     }
-    
     if (!amount || amount <= 0) {
         window.showAlert("Error", "Please enter a valid donation amount.", "error");
         return;
     }
-    
     if (!donorName) {
         window.showAlert("Error", "Please enter your name.", "error");
         return;
     }
-    
     if (!currentDonationData) {
         window.showAlert("Error", "Donation data is missing. Please try again.", "error");
         return;
     }
     
     showLoading("Processing payment...");
-    
     try {
         let paymentResult;
-        
         switch(paymentMethod) {
             case 'gcash':
                 paymentResult = await processGCashPayment(amount);
@@ -237,7 +239,6 @@ window.processPayment = async function() {
         }
         
         await saveDonation(paymentResult);
-        
         window.toggleModal('payment-modal');
         document.getElementById('donation-form')?.reset();
         currentDonationData = null;
@@ -249,20 +250,14 @@ window.processPayment = async function() {
             `Thank you for your donation of ₱${amount.toLocaleString()}! Your contribution will help our community.`,
             "success"
         );
-        
     } catch (error) {
         hideLoading();
         console.error('❌ Payment error:', error);
-        window.showAlert(
-            "Payment Failed", 
-            error.message || "Failed to process payment. Please try again.",
-            "error"
-        );
+        window.showAlert("Payment Failed", error.message || "Failed to process payment. Please try again.", "error");
     }
 };
 
 async function processGCashPayment(amount) {
-    console.log('💳 Processing GCash payment:', amount);
     return {
         transactionId: `GCASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         method: 'gcash',
@@ -273,7 +268,6 @@ async function processGCashPayment(amount) {
 }
 
 async function processPayMayaPayment(amount) {
-    console.log('💳 Processing PayMaya payment:', amount);
     return {
         transactionId: `MAYA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         method: 'paymaya',
@@ -284,7 +278,6 @@ async function processPayMayaPayment(amount) {
 }
 
 async function processBankTransfer(amount) {
-    console.log('🏦 Processing bank transfer:', amount);
     return {
         transactionId: `BANK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         method: 'bank_transfer',
@@ -300,7 +293,6 @@ async function processBankTransfer(amount) {
 }
 
 async function processCashPayment(amount) {
-    console.log('💵 Processing cash payment:', amount);
     return {
         transactionId: `CASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         method: 'cash',
@@ -326,13 +318,11 @@ async function saveDonation(paymentResult) {
             status: paymentResult.status === 'completed' ? 'confirmed' : 'pending',
             createdAt: serverTimestamp(),
         };
-        
         if (paymentResult.bankDetails) donationData.bankDetails = paymentResult.bankDetails;
         if (paymentResult.cashDetails) donationData.cashDetails = paymentResult.cashDetails;
         
         const docRef = await addDoc(collection(db, "donations"), donationData);
         console.log('✅ Donation saved:', docRef.id);
-        
         if (paymentResult.status === 'pending') showPaymentInstructions(paymentResult);
     } catch (error) {
         console.error('❌ Failed to save donation:', error);
@@ -447,7 +437,6 @@ window.showAlert = function(title, message, type = 'success') {
     if (!alertEl) { alert(`${title}\n${message}`); return; }
 
     clearTimeout(alertTimeout);
-
     const iconBox = document.getElementById('alert-icon-box');
     const icon = document.getElementById('alert-icon');
     
@@ -459,13 +448,15 @@ window.showAlert = function(title, message, type = 'success') {
         if (icon) icon.className = 'fa-solid fa-circle-exclamation text-lg';
     }
 
-    document.getElementById('alert-title').innerText = title;
-    document.getElementById('alert-message').innerText = message;
+    const alertTitle = document.getElementById('alert-title');
+    const alertMsg = document.getElementById('alert-message');
+    if (alertTitle) alertTitle.innerText = title;
+    if (alertMsg) alertMsg.innerText = message;
 
     alertEl.classList.remove('translate-x-96', 'opacity-0', 'pointer-events-none');
     alertEl.classList.add('translate-x-0', 'opacity-100');
 
-    alertTimeout = setTimeout(() => window.closeCustomAlert(), 4000);
+    alertTimeout = setTimeout(() => window.closeCustomAlert(), 5000);
 };
 
 window.closeCustomAlert = function() {
@@ -474,9 +465,12 @@ window.closeCustomAlert = function() {
 };
 
 window.showConfirmPopup = function(title, text, cb) {
-    document.getElementById('confirm-title').innerText = title;
-    document.getElementById('confirm-msg').innerText = text;
-    document.getElementById('confirm-modal').classList.remove('hidden');
+    const cTitle = document.getElementById('confirm-title');
+    const cMsg = document.getElementById('confirm-msg');
+    const cModal = document.getElementById('confirm-modal');
+    if (cTitle) cTitle.innerText = title;
+    if (cMsg) cMsg.innerText = text;
+    if (cModal) cModal.classList.remove('hidden');
     pendingConfirmCallback = cb;
 };
 
@@ -535,7 +529,7 @@ window.toggleAuthPanels = function(showRegister) {
     }
 };
 
-// ===== REGISTRATION =====
+// ===== REGISTRATION (FIXED AND VERIFIED) =====
 document.getElementById('register-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('reg-name')?.value.trim() || '';
@@ -552,26 +546,41 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
     if (pass !== confirmPass) { window.showAlert("Error", "Passwords do not match.", "error"); return; }
     if (pass.length < 6) { window.showAlert("Error", "Password must be at least 6 characters.", "error"); return; }
 
-    showLoading("Creating account...");
+    showLoading("Creating verified account...");
     try {
-        const checkSnap = await getDocs(query(collection(db, "residents"), where("email", "==", email), limit(1)));
-        if (!checkSnap.empty) { hideLoading(); window.showAlert("Error", "Email already registered.", "error"); return; }
+        // 1. Create User via Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+        const user = userCredential.user;
 
-        const docRef = await addDoc(collection(db, "residents"), {
+        // 2. Send Email Verification Link
+        await sendEmailVerification(user);
+
+        // 3. Save additional information using User Auth UID as Document ID
+        await setDoc(doc(db, "residents", user.uid), {
             name, email, phone, age: parseInt(age) || 0, gender, address,
             password: pass, isOnline: false, profilePic: "",
             createdAt: serverTimestamp(), lastActive: serverTimestamp(), role: "resident"
         });
-        newUserId = docRef.id;
+
+        // 4. Force Sign Out immediately so they cannot enter until verified
+        await signOut(auth);
+
         hideLoading();
         document.getElementById('register-form')?.reset();
-        window.showAlert("Success!", "Account created successfully! You can now login.", "success");
+        window.showAlert("Verification Sent!", "Account created! Isang verification link ang ipinadala sa iyong email. Paki-verify ito bago mag-login.", "success");
         window.toggleAuthPanels(false);
-        newUserId = null;
-    } catch (err) { hideLoading(); console.error('Registration error:', err); window.showAlert("Error", `Registration failed: ${err.message}`, "error"); }
+    } catch (err) { 
+        hideLoading(); 
+        console.error('Registration error:', err); 
+        let errorMsg = `Registration failed: ${err.message}`;
+        if (err.code === 'auth/email-already-in-use') {
+            errorMsg = "Ang email na ito ay rehistrado na.";
+        }
+        window.showAlert("Error", errorMsg, "error"); 
+    }
 });
 
-// ===== LOGIN =====
+// ===== LOGIN (FIXED SECURITY CHECK) =====
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('login-email')?.value.trim().toLowerCase() || '';
@@ -580,15 +589,29 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
 
     showLoading("Logging in...");
     try {
-        const q = query(collection(db, "residents"), where("email", "==", email), where("password", "==", pass), limit(1));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-            snap.forEach(d => { loggedInUser = { id: d.id, ...d.data() }; });
+        // 1. Log in via Firebase Auth
+        const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+        const user = userCredential.user;
+
+        // 2. CRITICAL SECURITY: Reload and Check if Email is Verified
+        await user.reload();
+        if (!auth.currentUser.emailVerified) {
+            hideLoading();
+            window.showAlert("Email Not Verified", "Hindi pa verified ang iyong email. Paki-click ang link na ipinadala sa iyong inbox o spam folder.", "error");
+            await signOut(auth);
+            return;
+        }
+
+        // 3. Fetch from Firestore using Document UID
+        const userDoc = await getDoc(doc(db, "residents", user.uid));
+        if (userDoc.exists()) {
+            loggedInUser = { id: userDoc.id, ...userDoc.data() };
             saveUserSession(loggedInUser);
             saveActiveTab('announcements');
             await setUserStatus(loggedInUser.id, true);
             await loadUserRegisteredEvents();
             setupParticipantsListener();
+            
             document.getElementById('auth-screen')?.classList.add('hidden');
             document.getElementById('dashboard')?.classList.remove('hidden');
             updateUIWithUserData(loggedInUser);
@@ -596,8 +619,22 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
             window.switchTab('announcements');
             hideLoading();
             window.showAlert("Welcome!", `Hello ${loggedInUser.name}!`, "success");
-        } else { hideLoading(); window.showAlert("Error", "Invalid email or password.", "error"); }
-    } catch (err) { hideLoading(); console.error('Login error:', err); window.showAlert("Error", `Login failed: ${err.message}`, "error"); }
+        } else { 
+            hideLoading(); 
+            window.showAlert("Error", "Resident profile data not found.", "error"); 
+            await signOut(auth);
+        }
+    } catch (err) { 
+        hideLoading(); 
+        console.error('Login error:', err); 
+        let errorMsg = "Maling email o password.";
+        if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+            errorMsg = "Maling email o password.";
+        } else {
+            errorMsg = err.message;
+        }
+        window.showAlert("Error", errorMsg, "error"); 
+    }
 });
 
 // ===== PROFILE MANAGEMENT =====
@@ -620,6 +657,11 @@ if (profileForm) {
         showLoading("Saving profile changes...");
         if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "Saving..."; }
         try {
+            // Update Auth Password simultaneously if changed
+            if (password !== loggedInUser.password && auth.currentUser) {
+                await updatePassword(auth.currentUser, password);
+            }
+
             const updateData = { name, phone, age: parseInt(ageVal) || 0, gender, address, password, lastProfileUpdate: serverTimestamp() };
             await updateDoc(doc(db, "residents", loggedInUser.id), updateData);
             Object.assign(loggedInUser, updateData);
@@ -627,8 +669,14 @@ if (profileForm) {
             updateUIWithUserData(loggedInUser);
             hideLoading();
             window.showAlert("Success!", "Your profile has been updated successfully!", "success");
-        } catch (error) { hideLoading(); console.error('❌ Profile save error:', error); window.showAlert("Error", `Failed to save profile: ${error.message}`, "error"); }
-        finally { isSaving = false; if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = "Save Profile Changes"; } }
+        } catch (error) { 
+            hideLoading(); 
+            console.error('❌ Profile save error:', error); 
+            window.showAlert("Error", `Failed to save profile: ${error.message}`, "error"); 
+        } finally { 
+            isSaving = false; 
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = "Save Profile Changes"; } 
+        }
     });
 }
 
@@ -637,8 +685,13 @@ document.getElementById('toggle-prof-password')?.addEventListener('click', funct
     const fields = document.querySelectorAll('#profile-form input[type="password"], #profile-form input[type="text"][id*="pass"]');
     const icon = document.getElementById('prof-password-icon');
     fields.forEach(f => {
-        if (f.type === 'password') { f.type = 'text'; if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } }
-        else { f.type = 'password'; if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } }
+        if (f.type === 'password') { 
+            f.type = 'text'; 
+            if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); } 
+        } else { 
+            f.type = 'password'; 
+            if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); } 
+        }
     });
 });
 
@@ -649,6 +702,10 @@ window.triggerLogoutConfirmation = function() {
         try {
             if (loggedInUser?.id) await setUserStatus(loggedInUser.id, false);
             if (participantsUnsubscribe) { participantsUnsubscribe(); participantsUnsubscribe = null; }
+            
+            // Log out from Auth Session
+            await signOut(auth);
+            
             clearUserSession();
             loggedInUser = null;
             registeredEventIds.clear();
@@ -664,12 +721,14 @@ window.triggerLogoutConfirmation = function() {
 
 // ===== CONFIRM MODAL HANDLERS =====
 document.getElementById('confirm-cancel-btn')?.addEventListener('click', () => {
-    document.getElementById('confirm-modal')?.classList.add('hidden');
+    const confirmModal = document.getElementById('confirm-modal');
+    if (confirmModal) confirmModal.classList.add('hidden');
     pendingConfirmCallback = null;
 });
 
 document.getElementById('confirm-proceed-btn')?.addEventListener('click', () => {
-    document.getElementById('confirm-modal')?.classList.add('hidden');
+    const confirmModal = document.getElementById('confirm-modal');
+    if (confirmModal) confirmModal.classList.add('hidden');
     if (typeof pendingConfirmCallback === 'function') pendingConfirmCallback();
     pendingConfirmCallback = null;
 });
@@ -694,7 +753,7 @@ onSnapshot(query(collection(db, "announcements"), orderBy("createdAt", "desc")),
     container.innerHTML = html;
 }, (error) => console.error('❌ Announcements error:', error));
 
-// 2. ===== EVENTS RENDERER (FIXED TIME DISPLAY) =====
+// 2. ===== EVENTS RENDERER =====
 function renderEvents() {
     const grid = document.getElementById('events-grid');
     if (!grid) return;
@@ -718,10 +777,8 @@ function renderEvents() {
                 const isRegistered = registeredEventIds.has(id);
                 const isCompleted = completedEventIds.has(id);
                 
-                // Format date and time for display
                 const dateDisplay = ev.date || 'TBA';
                 const timeDisplay = ev.time ? formatTimeDisplay(ev.time) : '';
-                const dateTimeDisplay = timeDisplay ? `${dateDisplay} | ${timeDisplay}` : dateDisplay;
                 
                 let buttonHtml = '';
                 if (isCompleted) {
@@ -749,7 +806,7 @@ function renderEvents() {
         .catch((error) => console.error('❌ Events render error:', error));
 }
 
-// ===== MY EVENTS RENDERER (FIXED TIME DISPLAY) =====
+// ===== MY EVENTS RENDERER =====
 function renderMyEvents() {
     const grid = document.getElementById('my-events-grid');
     if (!grid) return;
@@ -758,7 +815,6 @@ function renderMyEvents() {
         grid.innerHTML = `<div class="col-span-full text-center py-10 text-stone-400"><i class="fa-solid fa-calendar-xmark text-4xl mb-3 opacity-30"></i><p>Please login to see your events.</p></div>`;
         return;
     }
-
     if (registeredEventIds.size === 0 && completedEventIds.size === 0) {
         grid.innerHTML = `<div class="col-span-full text-center py-10 text-stone-400"><i class="fa-solid fa-calendar-xmark text-4xl mb-3 opacity-30"></i><p>You haven't registered for any events yet.</p></div>`;
         return;
@@ -768,7 +824,6 @@ function renderMyEvents() {
         .then((snap) => {
             let html = '';
             let foundEvents = false;
-
             snap.forEach(d => {
                 const ev = d.data(), id = d.id;
                 const isRegistered = registeredEventIds.has(id);
@@ -808,7 +863,6 @@ function renderMyEvents() {
                         </div>
                     </div>`;
             });
-
             grid.innerHTML = foundEvents ? html : `<div class="col-span-full text-center py-10 text-stone-400"><i class="fa-solid fa-calendar-xmark text-4xl mb-3 opacity-30"></i><p>You haven't registered for any events yet.</p></div>`;
         })
         .catch((error) => {
@@ -817,28 +871,21 @@ function renderMyEvents() {
         });
 }
 
-// ===== CONFIRM JOIN EVENT (WITH TIME) =====
+// ===== CONFIRM JOIN EVENT =====
 window.confirmJoinEvent = function(eventId, eventTitle, eventDate, eventTime, eventLocation) {
     if (!loggedInUser) {
         window.showAlert("Error", "Please login first to join events.", "error");
         return;
     }
-
     if (registeredEventIds.has(eventId) || completedEventIds.has(eventId)) {
         window.showAlert("Already Registered", `You have already registered for "${eventTitle}".`, "error");
         return;
     }
 
     let confirmMessage = `You are about to join:\n\n"${eventTitle}"`;
-    if (eventDate && eventDate !== 'undefined') {
-        confirmMessage += `\n📅 Date: ${eventDate}`;
-    }
-    if (eventTime && eventTime !== 'undefined' && eventTime !== '') {
-        confirmMessage += `\n🕐 Time: ${eventTime}`;
-    }
-    if (eventLocation && eventLocation !== 'undefined') {
-        confirmMessage += `\n📍 Location: ${eventLocation}`;
-    }
+    if (eventDate && eventDate !== 'undefined') confirmMessage += `\n📅 Date: ${eventDate}`;
+    if (eventTime && eventTime !== 'undefined' && eventTime !== '') confirmMessage += `\n🕐 Time: ${eventTime}`;
+    if (eventLocation && eventLocation !== 'undefined') confirmMessage += `\n📍 Location: ${eventLocation}`;
     confirmMessage += `\n\nDo you want to proceed with this registration?`;
 
     window.showConfirmPopup("Join Event?", confirmMessage, async () => {
@@ -856,10 +903,17 @@ async function performJoinEvent(eventId, eventTitle) {
             let alreadyRegistered = false;
             existingSnap.forEach(doc => {
                 const data = doc.data();
-                if (data.status === 'registered') { registeredEventIds.add(eventId); alreadyRegistered = true; }
-                if (data.status === 'completed') { completedEventIds.add(eventId); alreadyRegistered = true; }
+                if (data.status === 'registered' || data.status === 'completed') {
+                    alreadyRegistered = true;
+                }
             });
-            if (alreadyRegistered) { renderEvents(); renderMyEvents(); hideLoading(); window.showAlert("Already Registered", `You are already registered for "${eventTitle}".`, "error"); return; }
+            if (alreadyRegistered) { 
+                renderEvents(); 
+                renderMyEvents(); 
+                hideLoading(); 
+                window.showAlert("Already Registered", `You are already registered for "${eventTitle}".`, "error"); 
+                return; 
+            }
         }
 
         await addDoc(collection(db, "participants"), {
@@ -873,7 +927,11 @@ async function performJoinEvent(eventId, eventTitle) {
         renderMyEvents();
         hideLoading();
         window.showAlert("Success!", `You have successfully joined "${eventTitle}"!`, "success");
-    } catch (e) { hideLoading(); console.error('❌ Join event error:', e); window.showAlert("Error", "Failed to join event. Please try again.", "error"); }
+    } catch (e) { 
+        hideLoading(); 
+        console.error('❌ Join event error:', e); 
+        window.showAlert("Error", "Failed to join event. Please try again.", "error"); 
+    }
 }
 
 window.joinEvent = async function(eventId, eventTitle) {
@@ -892,7 +950,9 @@ window.unregisterFromEvent = async function(eventId, eventTitle) {
             const existingSnap = await getDocs(existingQuery);
             if (!existingSnap.empty) {
                 const updatePromises = [];
-                existingSnap.forEach((document) => { updatePromises.push(updateDoc(doc(db, "participants", document.id), { status: 'cancelled', cancelledAt: serverTimestamp() })); });
+                existingSnap.forEach((document) => { 
+                    updatePromises.push(updateDoc(doc(db, "participants", document.id), { status: 'cancelled', cancelledAt: serverTimestamp() })); 
+                });
                 await Promise.all(updatePromises);
             }
             registeredEventIds.delete(eventId);
@@ -1020,17 +1080,20 @@ window.switchTab = function(tabId) {
     }, 800);
 };
 
-// UPDATED openEventDetails with time parameter
 window.openEventDetails = function(title, date, time, location, desc) {
-    document.getElementById('modal-event-title').innerText = title;
-    
+    const mTitle = document.getElementById('modal-event-title');
+    const mDate = document.getElementById('modal-event-date');
+    const mLocation = document.getElementById('modal-event-location');
+    const mDesc = document.getElementById('modal-event-desc');
+
+    if (mTitle) mTitle.innerText = title;
     let dateDisplay = `Date: ${date || 'TBA'}`;
     if (time && time !== 'undefined' && time !== '') {
         dateDisplay += ` at ${time}`;
     }
-    document.getElementById('modal-event-date').innerHTML = `<i class="fa-solid fa-calendar mr-2"></i>${dateDisplay}`;
-    document.getElementById('modal-event-location').innerHTML = `<i class="fa-solid fa-location-dot mr-2"></i>Location: ${location || 'TBA'}`;
-    document.getElementById('modal-event-desc').innerHTML = desc;
+    if (mDate) mDate.innerHTML = `<i class="fa-solid fa-calendar mr-2"></i>${dateDisplay}`;
+    if (mLocation) mLocation.innerHTML = `<i class="fa-solid fa-location-dot mr-2"></i>Location: ${location || 'TBA'}`;
+    if (mDesc) mDesc.innerHTML = desc;
     window.toggleModal('view-event-modal');
 };
 
@@ -1067,43 +1130,56 @@ window.toggleMobileMenu = function() {
 if (mobileMenu) mobileMenu.addEventListener('click', (e) => { if (e.target === mobileMenu) window.toggleMobileMenu(); });
 if (menuPanel) menuPanel.querySelectorAll('button').forEach(b => b.addEventListener('click', window.toggleMobileMenu));
 
-// ===== APPLICATION INITIALIZATION =====
+// ===== APPLICATION INITIALIZATION (SECURED WITH AUTH STATE) =====
 window.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Application initializing...');
     showLoading("Initializing application...");
-    const savedUser = getSavedSession();
-    if (savedUser?.id) {
-        console.log('👤 Restoring session for:', savedUser.email);
-        showLoading("Restoring your session...");
-        try {
-            const snap = await getDoc(doc(db, "residents", savedUser.id));
-            if (snap.exists()) {
-                loggedInUser = { id: snap.id, ...snap.data() };
-                const savedEvents = sessionStorage.getItem('registeredEvents');
-                if (savedEvents) { try { registeredEventIds = new Set(JSON.parse(savedEvents)); } catch (e) { registeredEventIds = new Set(); } }
-                const savedCompleted = sessionStorage.getItem('completedEvents');
-                if (savedCompleted) { try { completedEventIds = new Set(JSON.parse(savedCompleted)); } catch (e) { completedEventIds = new Set(); } }
-                document.getElementById('auth-screen')?.classList.add('hidden');
-                document.getElementById('dashboard')?.classList.remove('hidden');
-                updateUIWithUserData(loggedInUser);
-                await setUserStatus(loggedInUser.id, true);
-                initUserHourTracker();
-                await loadUserRegisteredEvents();
-                setupParticipantsListener();
-                const activeTab = getSavedActiveTab();
-                setTimeout(() => window.switchTab(activeTab), 500);
-                console.log('✅ Session restored successfully');
-            } else { console.log('⚠️ Saved user not found in database'); clearUserSession(); hideLoading(); }
-        } catch (error) {
-            console.error('❌ Session restore error:', error);
-            loggedInUser = savedUser;
-            document.getElementById('auth-screen')?.classList.add('hidden');
-            document.getElementById('dashboard')?.classList.remove('hidden');
-            updateUIWithUserData(loggedInUser);
-            initUserHourTracker();
-            setTimeout(() => window.switchTab(getSavedActiveTab()), 500);
+
+    // Native Observer from Firebase Auth to persistent active user validation
+    onAuthStateChanged(auth, async (user) => {
+        if (user && user.emailVerified) {
+            console.log('👤 Active authenticated session:', user.email);
+            try {
+                const snap = await getDoc(doc(db, "residents", user.uid));
+                if (snap.exists()) {
+                    loggedInUser = { id: snap.id, ...snap.data() };
+                    saveUserSession(loggedInUser);
+                    
+                    const savedEvents = sessionStorage.getItem('registeredEvents');
+                    if (savedEvents) { try { registeredEventIds = new Set(JSON.parse(savedEvents)); } catch (e) { registeredEventIds = new Set(); } }
+                    const savedCompleted = sessionStorage.getItem('completedEvents');
+                    if (savedCompleted) { try { completedEventIds = new Set(JSON.parse(savedCompleted)); } catch (e) { completedEventIds = new Set(); } }
+                    
+                    document.getElementById('auth-screen')?.classList.add('hidden');
+                    document.getElementById('dashboard')?.classList.remove('hidden');
+                    updateUIWithUserData(loggedInUser);
+                    await setUserStatus(loggedInUser.id, true);
+                    initUserHourTracker();
+                    await loadUserRegisteredEvents();
+                    setupParticipantsListener();
+                    
+                    const activeTab = getSavedActiveTab();
+                    window.switchTab(activeTab);
+                    console.log('✅ Verified session restored successfully.');
+                } else {
+                    console.log('⚠️ No matching database profile. Signing out.');
+                    await signOut(auth);
+                    clearUserSession();
+                    hideLoading();
+                }
+            } catch (error) {
+                console.error('❌ Session restore error:', error);
+                hideLoading();
+            }
+        } else {
+            console.log('👋 No active session or unverified email.');
+            clearUserSession();
+            loggedInUser = null;
+            document.getElementById('auth-screen')?.classList.remove('hidden');
+            document.getElementById('dashboard')?.classList.add('hidden');
+            hideLoading();
         }
-    } else { console.log('👋 No saved session found'); setTimeout(hideLoading, 500); }
+    });
     console.log('✅ Application initialized');
 });
 
@@ -1126,8 +1202,8 @@ window.joinEvent = joinEvent;
 window.confirmJoinEvent = confirmJoinEvent;
 window.performJoinEvent = performJoinEvent;
 window.unregisterFromEvent = unregisterFromEvent;
-window.selectPaymentMethod = selectPaymentMethod;
-window.setAmount = setAmount;
-window.processPayment = processPayment;
-window.openPaymentModal = openPaymentModal;
+window.selectPaymentMethod = window.selectPaymentMethod;
+window.setAmount = window.setAmount;
+window.processPayment = window.processPayment;
+window.openPaymentModal = window.openPaymentModal;
 window.formatTimeDisplay = formatTimeDisplay;
