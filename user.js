@@ -567,14 +567,14 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
 
         hideLoading();
         document.getElementById('register-form')?.reset();
-        window.showAlert("Verification Sent!", "Account created! Isang verification link ang ipinadala sa iyong email. Paki-verify ito bago mag-login.", "success");
+        window.showAlert("Verification Sent!", "Account created! Email verification sent to your email. Confirm it and login your account!", "success");
         window.toggleAuthPanels(false);
     } catch (err) { 
         hideLoading(); 
         console.error('Registration error:', err); 
         let errorMsg = `Registration failed: ${err.message}`;
         if (err.code === 'auth/email-already-in-use') {
-            errorMsg = "Ang email na ito ay rehistrado na.";
+            errorMsg = "This email is already used.";
         }
         window.showAlert("Error", errorMsg, "error"); 
     }
@@ -597,7 +597,7 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
         await user.reload();
         if (!auth.currentUser.emailVerified) {
             hideLoading();
-            window.showAlert("Email Not Verified", "Hindi pa verified ang iyong email. Paki-click ang link na ipinadala sa iyong inbox o spam folder.", "error");
+            window.showAlert("Email Not Verified", "Please check your email for email verification, check your inbox or spam folder.", "error");
             await signOut(auth);
             return;
         }
