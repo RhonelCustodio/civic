@@ -272,16 +272,13 @@
                 bottom: 0;
                 width: 20rem !important;
                 max-width: 85vw !important;
-                /* Never exceed 85% of screen width */
                 z-index: 50;
                 transform: translateX(-100%);
                 overflow: hidden !important;
-                /* Prevent sidebar itself from scrolling */
                 display: flex;
                 flex-direction: column;
                 height: 100vh;
                 height: 100dvh;
-                /* Dynamic viewport height for mobile browsers */
             }
 
             #sidebar.translate-x-0 {
@@ -292,27 +289,16 @@
                 transform: translateX(-100%) !important;
             }
 
-            /* Fixed header section */
             #sidebar>div:first-child {
                 flex-shrink: 0;
             }
 
-            /* Scrollable navigation */
             #sidebar nav {
                 flex: 1;
                 min-height: 0;
-                /* Critical for flex child to scroll */
                 overflow-y: auto !important;
                 -webkit-overflow-scrolling: touch;
-                /* Smooth scrolling on iOS */
                 overscroll-behavior: contain;
-                /* Prevent body scroll when reaching boundaries */
-            }
-
-            /* Remove old conflicting rule */
-            #dashboard aside {
-                overflow-y: visible;
-                height: auto;
             }
         }
 
@@ -323,7 +309,6 @@
                 transform: translateX(0) !important;
                 height: 100vh;
                 overflow-y: auto;
-                /* Allow scrolling on desktop */
             }
 
             #mobile-overlay {
@@ -396,12 +381,83 @@
             max-height: 80vh;
             overflow-y: auto;
         }
+
+        /* ===== CUSTOM GLASSMORPHISM & BACKGROUND STYLES ===== */
+        .auth-right-side {
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/9/9d/Victoria%2CTarlacjf6342_01.JPG');
+            /* Replace with your image link */
+            background-size: cover;
+            background-position: calc(100% - 0px) calc(50% + 0px);
+            background-repeat: no-repeat;
+
+        }
+
+        .auth-right-side::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            /* Dark overlay to ensure glass panel is readable */
+            z-index: 0;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(16px);
+            /* Safari support */
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Remove default arrow in most browsers */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: none !important;
+            /* Ensures no custom background image is applied */
+        }
+
+        /* Change placeholder (default option) text color */
+        select:invalid {
+            color: #9CA3AF;
+            /* Replace with your desired hex code, e.g., gray-400 */
+        }
+
+        /* Optional: Ensure normal options have the desired text color */
+        select option {
+            color: #1F2937;
+            /* e.g., gray-800 */
+        }
+
+        /* Inalis ang arrow at inayos ang placeholder color */
+        select#reg-gender {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            background-image: none !important;
+            /* Ito ang nagtatanggal ng arrow */
+            padding-right: 0.75rem !important;
+            /* Adjust padding para hindi magmukhang masikip */
+        }
+
+        /* Kulay ng Placeholder (kapag ang value ay empty) */
+        select#reg-gender:invalid {
+            color: #9CA3AF !important;
+            /* Light Gray (Tailwind gray-400) */
+        }
+
+        /* Kulay ng text kapag nakapili na (Normal options) */
+        select#reg-gender option {
+            color: #1F2937 !important;
+            /* Dark Gray (Tailwind gray-800) */
+        }
     </style>
 </head>
 
 <body class="bg-white font-sans text-gray-800 relative antialiased">
 
-    <!-- Loading -->
     <div id="global-loading"
         class="fixed inset-0 bg-gray-900/90 backdrop-blur-sm hidden flex flex-col items-center justify-center z-[200]">
         <div class="relative">
@@ -412,120 +468,172 @@
         <p id="loading-text" class="text-white font-semibold tracking-wide mt-5 text-sm uppercase">Loading...</p>
     </div>
 
-    <!-- Auth Screen -->
-    <div id="auth-screen"
-        class="min-h-screen flex items-center justify-center bg-white px-4 py-8 relative overflow-hidden">
-        <div id="login-panel"
-            class="bg-gradient-to-br from-tsu-blueDark via-tsu-blue to-tsu-blueLight rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-tsu-blueLight/30 relative z-10">
-            <div class="text-center mb-6">
-                <div
-                    class="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-tsu-gold to-tsu-goldDark rounded-2xl mb-3 shadow-lg">
-                    <i class="fa-solid fa-building-columns text-tsu-dark text-xl"></i>
+    <div id="auth-screen" class="min-h-screen flex flex-col lg:flex-row bg-gray-50 relative overflow-hidden">
+
+        <div class="flex-1 flex flex-col lg:h-screen lg:overflow-y-auto p-6 lg:p-12 order-2 lg:order-1 relative z-0">
+            <div class="max-w-4xl mx-auto space-y-12 pb-10 flex-1">
+                <div class="text-left mb-10 pt-4">
+                    <h1 class="text-4xl sm:text-5xl font-black text-tsu-blue tracking-tight mb-3">Welcome to OneVictoria
+                    </h1>
+                    <p class="text-lg text-gray-600 font-medium max-w-2xl">Discover what's happening in your community.
+                        Stay updated with the latest news, announcements, and events.</p>
                 </div>
-                <h2 class="text-2xl font-extrabold text-white tracking-tight">OneVictoria</h2>
-                <p class="text-gray-300 text-sm mt-1 font-medium">Resident Access Hub</p>
-                <div class="flex items-center justify-center mt-3">
-                    <div class="h-px w-6 bg-white/20"></div><span
-                        class="px-2 text-[10px] font-semibold text-gray-300 uppercase tracking-wider">Sign In</span>
-                    <div class="h-px w-6 bg-white/20"></div>
-                </div>
+
+                <section>
+                    <div class="flex items-center justify-between mb-6 border-b-2 border-gray-200 pb-3">
+                        <h2 class="text-2xl font-extrabold text-gray-800 flex items-center">
+                            <i class="fa-solid fa-bullhorn text-tsu-gold mr-3"></i> Public Announcements
+                        </h2>
+                    </div>
+                    <div id="public-announcements-container" class="space-y-5">
+                        <div class="text-center py-10 bg-white rounded-xl border shadow-sm">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl text-gray-300 mb-3"></i>
+                            <p class="text-sm text-gray-400">Loading announcements...</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <div class="flex items-center justify-between mb-6 border-b-2 border-gray-200 pb-3">
+                        <h2 class="text-2xl font-extrabold text-gray-800 flex items-center">
+                            <i class="fa-solid fa-calendar-days text-tsu-gold mr-3"></i> Upcoming Events
+                        </h2>
+                    </div>
+                    <div id="public-events-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+                        <div class="col-span-full text-center py-10 bg-white rounded-xl border shadow-sm">
+                            <i class="fa-solid fa-spinner fa-spin text-2xl text-gray-300 mb-3"></i>
+                            <p class="text-sm text-gray-400">Loading events...</p>
+                        </div>
+                    </div>
+                </section>
             </div>
-            <form id="login-form" class="space-y-4">
-                <div><label
-                        class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Email</label>
-                    <div class="relative"><span
-                            class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i
-                                class="fa-solid fa-envelope text-xs"></i></span><input type="email" id="login-email"
-                            required
-                            class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 text-sm transition-all"
-                            placeholder="example@gmail.com"></div>
+
+            <footer
+                class="max-w-4xl mx-auto w-full mt-auto pt-8 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500">
+                <p>&copy; 2026 Municipality of Victoria. All rights reserved.</p>
+                <div class="flex space-x-4 mt-4 sm:mt-0 font-medium">
+                    <a href="#" class="hover:text-tsu-blue transition-colors">Privacy</a>
+                    <a href="#" class="hover:text-tsu-blue transition-colors">Terms</a>
+                    <a href="#" class="hover:text-tsu-blue transition-colors">Contact</a>
                 </div>
-                <div><label
-                        class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Password</label>
-                    <div class="relative"><span
-                            class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i
-                                class="fa-solid fa-lock text-xs"></i></span><input type="password" id="login-password"
-                            required
-                            class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 text-sm transition-all"
-                            placeholder="••••••••"></div>
-                </div>
-                <button type="submit"
-                    class="w-full bg-tsu-gold hover:bg-tsu-goldLight text-tsu-dark font-bold py-2.5 rounded-xl text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-1.5 transition-all"><i
-                        class="fa-solid fa-right-to-bracket text-xs"></i><span>Access Portal</span></button>
-            </form>
-            <div class="mt-4 text-center pt-3 border-t border-white/10">
-                <p class="text-sm text-gray-300">New resident? <button type="button" onclick="toggleAuthPanels(true)"
-                        class="text-tsu-gold font-bold hover:underline transition-all">Create Account</button></p>
-            </div>
+            </footer>
         </div>
-        <div id="register-panel"
-            class="bg-gradient-to-br from-tsu-blueDark via-tsu-blue to-tsu-blueLight rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-tsu-blueLight/30 relative z-10 hidden">
-            <div class="text-center mb-5">
-                <div
-                    class="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-tsu-gold to-tsu-goldDark rounded-2xl mb-3 shadow-lg">
-                    <i class="fa-solid fa-user-plus text-tsu-dark text-xl"></i>
+
+        <div
+            class="w-full lg:w-[450px] xl:w-[500px] shrink-0 auth-right-side flex flex-col items-center justify-center p-6 lg:p-10 shadow-2xl relative z-10 order-1 lg:order-2 lg:h-screen lg:overflow-y-auto">
+
+            <div id="login-panel" class="glass-panel rounded-3xl max-w-sm w-full p-8 relative z-10">
+                <div class="text-center mb-6">
+                    <div
+                        class="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-tsu-gold to-tsu-goldDark rounded-2xl mb-3 shadow-lg">
+                        <i class="fa-solid fa-building-columns text-tsu-dark text-xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-extrabold text-white tracking-tight">OneVictoria</h2>
+                    <p class="text-gray-300 text-sm mt-1 font-medium">Resident Access Hub</p>
+                    <div class="flex items-center justify-center mt-3">
+                        <div class="h-px w-6 bg-white/20"></div><span
+                            class="px-2 text-[10px] font-semibold text-gray-300 uppercase tracking-wider">Sign In</span>
+                        <div class="h-px w-6 bg-white/20"></div>
+                    </div>
                 </div>
-                <h2 class="text-2xl font-extrabold text-white tracking-tight">Create Account</h2>
-                <p class="text-gray-300 text-sm mt-1 font-medium">Join the Resident Hub</p>
+                <form id="login-form" class="space-y-4">
+                    <div><label
+                            class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Email</label>
+                        <div class="relative"><span
+                                class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i
+                                    class="fa-solid fa-envelope text-xs"></i></span><input type="email" id="login-email"
+                                required
+                                class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 text-sm transition-all"
+                                placeholder="example@gmail.com"></div>
+                    </div>
+                    <div><label
+                            class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Password</label>
+                        <div class="relative"><span
+                                class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i
+                                    class="fa-solid fa-lock text-xs"></i></span><input type="password"
+                                id="login-password" required
+                                class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 text-sm transition-all"
+                                placeholder="••••••••"></div>
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-tsu-gold hover:bg-tsu-goldLight text-tsu-dark font-bold py-2.5 rounded-xl text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-1.5 transition-all"><i
+                            class="fa-solid fa-right-to-bracket text-xs"></i><span>Access Portal</span></button>
+                </form>
+                <div class="mt-4 text-center pt-3 border-t border-white/10">
+                    <p class="text-sm text-gray-300">New resident? <button type="button"
+                            onclick="toggleAuthPanels(true)"
+                            class="text-tsu-gold font-bold hover:underline transition-all">Create Account</button></p>
+                </div>
             </div>
-            <form id="register-form" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
-                <div><label class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Full
-                        Name</label><input type="text" id="reg-name" required
-                        class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
-                        placeholder="Juan Dela Cruz"></div>
-                <div><label
-                        class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Email</label><input
-                        type="email" id="reg-email" required
-                        class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
-                        placeholder="juan@email.com"></div>
-                <div><label
-                        class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Phone</label><input
-                        type="tel" id="reg-phone" required
-                        class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
-                        placeholder="09123456789"></div>
-                <div class="grid grid-cols-2 gap-2.5">
-                    <div><label
-                            class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Age</label><input
-                            type="number" id="reg-age" required min="15" max="120"
-                            class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
-                            placeholder="25"></div>
-                    <div><label
-                            class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Gender</label><select
-                            id="reg-gender" required
-                            class="w-full rounded-xl bg-white/10 border border-white/20 text-white p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all">
-                            <option value="" class="text-gray-800">Select</option>
-                            <option value="Male" class="text-gray-800">Male</option>
-                            <option value="Female" class="text-gray-800">Female</option>
-                            <option value="Other" class="text-gray-800">Other</option>
-                        </select></div>
+
+            <div id="register-panel" class="glass-panel rounded-3xl max-w-sm w-full p-8 relative z-10 hidden">
+                <div class="text-center mb-5">
+                    <div
+                        class="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-tsu-gold to-tsu-goldDark rounded-2xl mb-3 shadow-lg">
+                        <i class="fa-solid fa-user-plus text-tsu-dark text-xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-extrabold text-white tracking-tight">Create Account</h2>
+                    <p class="text-gray-300 text-sm mt-1 font-medium">Join the Resident Hub</p>
                 </div>
-                <div><label
-                        class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Address</label><input
-                        type="text" id="reg-address" required
-                        class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
-                        placeholder="Barangay, City, Province"></div>
-                <div><label
-                        class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Password</label><input
-                        type="password" id="reg-password" required minlength="6"
-                        class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
-                        placeholder="Min. 6 characters"></div>
-                <div><label class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Confirm
-                        Password</label><input type="password" id="reg-confirm-password" required minlength="6"
-                        class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
-                        placeholder="Re-enter password"></div>
-                <button type="submit"
-                    class="w-full bg-tsu-gold hover:bg-tsu-goldLight text-tsu-dark font-bold py-2.5 rounded-xl text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-1.5 transition-all"><i
-                        class="fa-solid fa-user-check text-xs"></i><span>Create Account</span></button>
-            </form>
-            <div class="text-center mt-3 pt-3 border-t border-white/10">
-                <p class="text-sm text-gray-300">Have an account? <button type="button"
-                        onclick="toggleAuthPanels(false)"
-                        class="text-tsu-gold font-bold hover:underline transition-all">Sign In</button></p>
+                <form id="register-form" class="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                    <div><label class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Full
+                            Name</label><input type="text" id="reg-name" required
+                            class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
+                            placeholder="Juan Dela Cruz"></div>
+                    <div><label
+                            class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Email</label><input
+                            type="email" id="reg-email" required
+                            class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
+                            placeholder="juan@email.com"></div>
+                    <div><label
+                            class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Phone</label><input
+                            type="tel" id="reg-phone" required
+                            class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
+                            placeholder="09123456789"></div>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <div><label
+                                class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Age</label><input
+                                type="number" id="reg-age" required min="15" max="120"
+                                class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
+                                placeholder="25"></div>
+                        <div><label
+                                class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Gender</label><select
+                                id="reg-gender" required
+                                class="w-full rounded-xl bg-white/10 border border-white/20 text-gray-800 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all">
+                                <option value="" disabled selected hidden>Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select></div>
+                    </div>
+                    <div><label
+                            class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Address</label><input
+                            type="text" id="reg-address" required
+                            class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
+                            placeholder="Barangay, City, Province"></div>
+                    <div><label
+                            class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Password</label><input
+                            type="password" id="reg-password" required minlength="6"
+                            class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
+                            placeholder="Min. 6 characters"></div>
+                    <div><label
+                            class="block text-[10px] font-semibold text-gray-300 uppercase tracking-wider mb-1">Confirm
+                            Password</label><input type="password" id="reg-confirm-password" required minlength="6"
+                            class="w-full rounded-xl bg-white/10 border border-white/20 text-white placeholder-gray-400 p-2.5 text-sm focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 transition-all"
+                            placeholder="Re-enter password"></div>
+                    <button type="submit"
+                        class="w-full bg-tsu-gold hover:bg-tsu-goldLight text-tsu-dark font-bold py-2.5 rounded-xl text-sm uppercase tracking-wider shadow-lg flex items-center justify-center space-x-1.5 transition-all"><i
+                            class="fa-solid fa-user-check text-xs"></i><span>Create Account</span></button>
+                </form>
+                <div class="text-center mt-3 pt-3 border-t border-white/10">
+                    <p class="text-sm text-gray-300">Have an account? <button type="button"
+                            onclick="toggleAuthPanels(false)"
+                            class="text-tsu-gold font-bold hover:underline transition-all">Sign In</button></p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Dashboard -->
     <div id="dashboard" class="hidden min-h-screen flex flex-col lg:flex-row">
         <div
             class="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between z-30 sticky top-0 shadow-sm">
@@ -543,12 +651,10 @@
                 class="text-gray-500 hover:text-tsu-blue p-2.5 rounded-xl hover:bg-gray-100 transition-all z-30"><i
                     class="fa-solid fa-bars text-2xl"></i></button>
         </div>
-        <!-- Mobile Overlay -->
         <div id="mobile-overlay" class="hidden" onclick="window.toggleMobileMenu()"></div>
 
-        <!-- Sidebar -->
         <aside id="sidebar"
-            class="sidebar-gradient text-white flex flex-col border-r border-white/5 shadow-2xl shrink-0 w-70 lg:w-70 sm:w-50 fixed md:relative z-50 h-full transition-transform duration-300 -translate-x-full md:translate-x-0">
+            class="bg-[#06202B] text-white flex flex-col border-r border-white/5 shadow-2xl shrink-0 w-70 lg:w-70 sm:w-50 fixed md:relative z-50 h-full transition-transform duration-300 -translate-x-full md:translate-x-0">
             <div class="p-6 border-b border-white/5 shrink-0">
                 <div class="flex items-center space-x-3.5">
                     <div
@@ -602,14 +708,13 @@
                         class="fa-solid fa-user-gear w-5 text-center text-tsu-gold text-xs"></i><span>Profile</span></button>
                 <div class="mt-auto pt-5 border-t border-white/5"><button type="button"
                         onclick="triggerLogoutConfirmation()"
-                        class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-sm text-rose-400 hover:bg-rose-500/10 transition-all"><i
+                        class="w-full flex items-center space-x-3 px-3.5 py-3 rounded-xl text-sm text-[#ed2139] hover:bg-rose-500/10 transition-all"><i
                             class="fa-solid fa-right-from-bracket w-5 text-center"></i><span>Sign Out</span></button>
                 </div>
             </nav>
         </aside>
 
-        <!-- Main Content -->
-        <main class="flex-1 p-6 lg:p-10 max-w-6xl mx-auto w-full overflow-y-auto bg-white">
+        <main class="flex-1 flex flex-col p-6 lg:p-10 max-w-6xl mx-auto w-full overflow-y-auto bg-white">
             <section id="announcements" class="tab-content hidden">
                 <div class="pb-5 mb-8 border-b-2 border-gray-200">
                     <h1 class="text-2xl sm:text-3xl font-extrabold text-tsu-blue tracking-tight">Civic Announcements
@@ -634,7 +739,6 @@
                 <div id="my-events-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 </div>
             </section>
-            <!-- NOTIFICATIONS TAB - NOW INSIDE MAIN -->
             <section id="notifications" class="tab-content hidden">
                 <div class="pb-5 mb-8 border-b-2 border-gray-200 flex items-center justify-between">
                     <div>
@@ -654,27 +758,25 @@
                 </div>
             </section>
             <section id="volunteers" class="tab-content hidden">
-                <div class="max-w-xl mx-auto">
-                    <div class="card p-4 sm:p-8">
-                        <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-4 sm:mb-5 flex items-center">
-                            <i class="fa-solid fa-hands-holding text-tsu-blue mr-2 sm:mr-3 text-base sm:text-lg"></i>
+                <div class="max-w-lg mx-auto">
+                    <div class="card p-4 sm:p-5">
+                        <h3 class="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center">
+                            <i class="fa-solid fa-hands-holding text-tsu-blue mr-2 text-sm sm:text-base"></i>
                             <span>Volunteer Application</span>
                         </h3>
-                        <form id="volunteer-form" class="space-y-3 sm:space-y-5">
+                        <form id="volunteer-form" class="space-y-3 sm:space-y-4">
                             <div>
-                                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Full
-                                    Name</label>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Full Name</label>
                                 <input type="text" id="vol-name" required readonly
-                                    class="w-full border border-gray-200 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm sm:text-base bg-gray-50 text-gray-500 cursor-not-allowed">
+                                    class="w-full border border-gray-200 rounded-lg p-2.5 text-sm bg-gray-50 text-gray-500 cursor-not-allowed">
                             </div>
 
                             <div>
-                                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Primary
-                                    Skill
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Primary Skill
                                     <span class="text-rose-500">*</span>
                                 </label>
                                 <select id="vol-skills" required
-                                    class="w-full border border-gray-200 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm sm:text-base focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue">
+                                    class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue">
                                     <option value="">Select your primary skill</option>
                                     <option value="First Aid">First Aid / Medical</option>
                                     <option value="Logistics">Logistics & Supply Chain</option>
@@ -696,11 +798,10 @@
                             </div>
 
                             <div>
-                                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Skill
-                                    Verification
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Skill Verification
                                     <span class="text-rose-500">*</span>
                                 </label>
-                                <div class="border-2 border-dashed border-gray-300 rounded-lg sm:rounded-xl p-4 sm:p-6 text-center hover:border-tsu-blue transition-all cursor-pointer"
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-3 sm:p-4 text-center hover:border-tsu-blue transition-all cursor-pointer"
                                     id="skill-verification-dropzone"
                                     onclick="document.getElementById('skill-verification-input').click()">
                                     <input type="file" id="skill-verification-input"
@@ -708,21 +809,22 @@
                                         onchange="handleSkillVerificationUpload(event)">
                                     <div id="skill-upload-placeholder">
                                         <i
-                                            class="fa-solid fa-cloud-arrow-up text-2xl sm:text-3xl text-gray-400 mb-2 sm:mb-3"></i>
-                                        <p class="text-xs sm:text-sm font-semibold text-gray-600">Upload Certificate or
-                                            Proof of Skill</p>
-                                        <p class="text-[10px] sm:text-xs text-gray-400 mt-1">Accepted: PDF, JPG, PNG,
-                                            DOC (Max 5MB)</p>
+                                            class="fa-solid fa-cloud-arrow-up text-xl sm:text-2xl text-gray-400 mb-1.5 sm:mb-2"></i>
+                                        <p class="text-[11px] sm:text-xs font-semibold text-gray-600">Upload Certificate
+                                            or Proof of Skill</p>
+                                        <p class="text-[9px] sm:text-[10px] text-gray-400 mt-0.5">Accepted: PDF, JPG,
+                                            PNG, DOC (Max 5MB)</p>
                                     </div>
                                     <div id="skill-upload-preview" class="hidden">
                                         <i
-                                            class="fa-solid fa-file-circle-check text-2xl sm:text-3xl text-emerald-500 mb-2 sm:mb-3"></i>
+                                            class="fa-solid fa-file-circle-check text-xl sm:text-2xl text-emerald-500 mb-1.5 sm:mb-2"></i>
                                         <p id="skill-file-name"
-                                            class="text-xs sm:text-sm font-semibold text-emerald-600"></p>
-                                        <p id="skill-file-size" class="text-[10px] sm:text-xs text-gray-400 mt-1"></p>
+                                            class="text-[11px] sm:text-xs font-semibold text-emerald-600"></p>
+                                        <p id="skill-file-size" class="text-[9px] sm:text-[10px] text-gray-400 mt-0.5">
+                                        </p>
                                         <button type="button"
                                             onclick="event.stopPropagation();removeSkillVerification()"
-                                            class="text-[10px] sm:text-xs text-rose-500 hover:text-rose-700 font-semibold mt-2">
+                                            class="text-[10px] text-rose-500 hover:text-rose-700 font-semibold mt-1.5">
                                             <i class="fa-solid fa-trash-can mr-1"></i>Remove
                                         </button>
                                     </div>
@@ -730,11 +832,9 @@
                             </div>
 
                             <div>
-                                <label
-                                    class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Experience
-                                    Level</label>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Experience Level</label>
                                 <select id="vol-experience"
-                                    class="w-full border border-gray-200 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm sm:text-base focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue">
+                                    class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue">
                                     <option value="">Select experience level</option>
                                     <option value="Beginner">Beginner (0-1 year)</option>
                                     <option value="Intermediate">Intermediate (1-3 years)</option>
@@ -744,12 +844,11 @@
                             </div>
 
                             <div>
-                                <label
-                                    class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Availability
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Availability
                                     <span class="text-rose-500">*</span>
                                 </label>
                                 <select id="vol-avail" required
-                                    class="w-full border border-gray-200 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm sm:text-base focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue">
+                                    class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue">
                                     <option value="">Select availability</option>
                                     <option value="Weekends">Weekends</option>
                                     <option value="Weekdays">Weekdays</option>
@@ -760,17 +859,16 @@
                             </div>
 
                             <div>
-                                <label
-                                    class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Additional
-                                    Notes (Optional)</label>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Additional Notes
+                                    (Optional)</label>
                                 <textarea id="vol-notes" rows="2"
-                                    class="w-full border border-gray-200 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm sm:text-base focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue resize-none"
+                                    class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue resize-none"
                                     placeholder="Any relevant experience, certifications, or information..."></textarea>
                             </div>
 
                             <button type="submit"
-                                class="btn-primary w-full py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base flex items-center justify-center space-x-2">
-                                <i class="fa-solid fa-paper-plane text-xs sm:text-sm"></i>
+                                class="btn-primary w-full py-2.5 rounded-lg text-sm flex items-center justify-center space-x-1.5">
+                                <i class="fa-solid fa-paper-plane text-xs"></i>
                                 <span>Submit Application</span>
                             </button>
                         </form>
@@ -847,96 +945,112 @@
                     </div>
                 </div>
             </section>
-            <section id="profile" class="tab-content hidden max-w-xl mx-auto">
-                <div class="pb-5 mb-8 border-b-2 border-gray-200">
-                    <h1 class="text-2xl sm:text-3xl font-extrabold text-tsu-blue tracking-tight">Profile Settings</h1>
-                    <p class="text-sm text-gray-500 mt-1.5">Manage your account</p>
+            <section id="profile" class="tab-content hidden max-w-lg mx-auto">
+                <div class="pb-4 mb-6 border-b-2 border-gray-200">
+                    <h1 class="text-xl sm:text-2xl font-extrabold text-tsu-blue tracking-tight">Profile Settings</h1>
+                    <p class="text-xs text-gray-500 mt-1">Manage your account</p>
                 </div>
-                <form id="profile-form" class="card p-8 space-y-6">
-                    <div class="flex flex-col items-center pb-6 border-b border-gray-100">
+                <form id="profile-form" class="card p-5 sm:p-6 space-y-5">
+                    <div class="flex flex-col items-center pb-4 border-b border-gray-100">
                         <div id="upload-trigger" onclick="triggerProfilePicUpload()"
                             class="relative group cursor-pointer">
                             <div
-                                class="w-28 h-28 rounded-2xl border-3 border-tsu-blue/20 shadow-md overflow-hidden bg-gray-50 flex items-center justify-center">
-                                <i id="profile-icon-fallback" class="fa-solid fa-user text-5xl text-gray-300"></i><img
+                                class="w-24 h-24 rounded-2xl border-3 border-tsu-blue/20 shadow-md overflow-hidden bg-gray-50 flex items-center justify-center">
+                                <i id="profile-icon-fallback" class="fa-solid fa-user text-4xl text-gray-300"></i><img
                                     id="profile-img-preview" src="" alt="Profile"
                                     class="w-full h-full object-cover hidden">
                             </div>
                             <div
-                                class="absolute inset-0 bg-black/50 rounded-2xl flex flex-col items-center justify-center text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                                <i class="fa-solid fa-camera text-xl mb-1"></i>Change
+                                class="absolute inset-0 bg-black/50 rounded-2xl flex flex-col items-center justify-center text-white text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                                <i class="fa-solid fa-camera text-lg mb-0.5"></i>Change
                             </div>
                         </div><input type="file" id="profile-pic-input" accept="image/*" class="hidden"
                             onchange="handleProfilePicChange(event)">
                         <div id="profile-pic-pending"
-                            class="hidden mt-3 flex items-center space-x-2 bg-amber-50 text-amber-700 px-3.5 py-1.5 rounded-full text-xs font-semibold border border-amber-200">
-                            <i class="fa-solid fa-clock text-xs"></i><span>Pending</span>
+                            class="hidden mt-2 flex items-center space-x-1.5 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[10px] font-semibold border border-amber-200">
+                            <i class="fa-solid fa-clock text-[10px]"></i><span>Pending</span>
                         </div><button type="button" id="remove-profile-pic-btn" onclick="removeProfilePic()"
-                            class="mt-3 text-xs text-rose-500 hover:text-rose-700 font-semibold hidden"><i
-                                class="fa-solid fa-trash-can mr-1.5 text-xs"></i>Remove Photo</button>
-                        <h3 id="profile-display-name" class="font-bold text-lg text-gray-800 mt-4"></h3>
-                        <p id="profile-display-email" class="text-sm text-gray-500"></p>
+                            class="mt-2 text-[10px] text-rose-500 hover:text-rose-700 font-semibold hidden"><i
+                                class="fa-solid fa-trash-can mr-1 text-[10px]"></i>Remove Photo</button>
+                        <h3 id="profile-display-name" class="font-bold text-base text-gray-800 mt-3"></h3>
+                        <p id="profile-display-email" class="text-xs text-gray-500"></p>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div><label class="block text-sm font-semibold text-gray-700 mb-1.5">Full Name <span
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-semibold text-gray-700 mb-1">Full Name <span
                                     class="text-rose-500">*</span></label><input type="text" id="prof-name" required
-                                class="w-full border border-gray-200 rounded-xl p-3 text-base focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
+                                class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
                                 placeholder="Full name"></div>
-                        <div><label class="block text-sm font-semibold text-gray-700 mb-1.5">Email <span
-                                    class="text-xs text-gray-400">(Fixed)</span></label><input type="email"
+                        <div><label class="block text-xs font-semibold text-gray-700 mb-1">Email <span
+                                    class="text-[10px] text-gray-400">(Fixed)</span></label><input type="email"
                                 id="prof-email" readonly
-                                class="w-full border border-gray-200 rounded-xl p-3 text-base bg-gray-100 text-gray-500 cursor-not-allowed">
+                                class="w-full border border-gray-200 rounded-lg p-2.5 text-sm bg-gray-100 text-gray-500 cursor-not-allowed">
                         </div>
-                        <div><label class="block text-sm font-semibold text-gray-700 mb-1.5">Mobile</label><input
+                        <div><label class="block text-xs font-semibold text-gray-700 mb-1">Mobile</label><input
                                 type="tel" id="prof-phone"
-                                class="w-full border border-gray-200 rounded-xl p-3 text-base focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
+                                class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
                                 placeholder="09123456789" maxlength="11"></div>
-                        <div><label class="block text-sm font-semibold text-gray-700 mb-1.5">Gender <span
-                                    class="text-xs text-gray-400">(Fixed)</span></label><select id="prof-gender"
+                        <div><label class="block text-xs font-semibold text-gray-700 mb-1">Gender <span
+                                    class="text-[10px] text-gray-400">(Fixed)</span></label><select id="prof-gender"
                                 disabled
-                                class="w-full border border-gray-200 rounded-xl p-3 text-base bg-gray-100 text-gray-500 cursor-not-allowed">
+                                class="w-full border border-gray-200 rounded-lg p-2.5 text-sm bg-gray-100 text-gray-500 cursor-not-allowed">
                                 <option value="">Select</option>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                                 <option value="Other">Other</option>
                             </select></div>
-                        <div><label class="block text-sm font-semibold text-gray-700 mb-1.5">Age <span
-                                    class="text-xs text-gray-400">(Once a year)</span></label><input type="number"
+                        <div><label class="block text-xs font-semibold text-gray-700 mb-1">Age <span
+                                    class="text-[10px] text-gray-400">(Once a year)</span></label><input type="number"
                                 id="prof-age"
-                                class="w-full border border-gray-200 rounded-xl p-3 text-base focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
+                                class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
                                 placeholder="Age" min="15" max="120"></div>
                         <div class="md:col-span-2"><label
-                                class="block text-sm font-semibold text-gray-700 mb-1.5">Address</label><input
-                                type="text" id="prof-address"
-                                class="w-full border border-gray-200 rounded-xl p-3 text-base focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
+                                class="block text-xs font-semibold text-gray-700 mb-1">Address</label><input type="text"
+                                id="prof-address"
+                                class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
                                 placeholder="Barangay, City"></div>
                     </div>
-                    <div class="border-t border-gray-100 pt-6"><label
-                            class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+                    <div class="border-t border-gray-100 pt-4"><label
+                            class="block text-xs font-semibold text-gray-700 mb-1">Password</label>
                         <div class="relative"><input type="password" id="prof-password"
-                                class="w-full border border-gray-200 rounded-xl p-3 pr-10 text-base focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
+                                class="w-full border border-gray-200 rounded-lg p-2.5 pr-9 text-sm focus:ring-2 focus:ring-tsu-blue/20 focus:border-tsu-blue"
                                 placeholder="New password"><button type="button" id="toggle-prof-password"
-                                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-tsu-blue"><i
-                                    id="prof-password-icon" class="fa-solid fa-eye text-base"></i></button></div>
-                        <p class="text-xs text-gray-400 mt-1.5">Leave blank to keep current</p>
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-tsu-blue"><i
+                                    id="prof-password-icon" class="fa-solid fa-eye text-sm"></i></button></div>
+                        <p class="text-[10px] text-gray-400 mt-1">Leave blank to keep current</p>
                     </div>
-                    <div class="flex space-x-4"><button type="button" onclick="cancelEdit()" id="cancel-edit-btn"
-                            class="btn-danger flex-1 py-3 rounded-xl text-base hidden"><i
-                                class="fa-solid fa-xmark text-sm mr-1.5"></i>Cancel</button><button type="button"
+                    <div class="flex space-x-3"><button type="button" onclick="cancelEdit()" id="cancel-edit-btn"
+                            class="btn-danger flex-1 py-2.5 rounded-lg text-sm hidden"><i
+                                class="fa-solid fa-xmark text-xs mr-1"></i>Cancel</button><button type="button"
                             onclick="toggleEditMode()" id="profile-action-btn"
-                            class="btn-secondary flex-1 py-3 rounded-xl text-base" data-mode="edit"><i
-                                class="fa-solid fa-pen-to-square text-sm mr-1.5"></i>Edit Profile</button></div>
+                            class="btn-secondary flex-1 py-2.5 rounded-lg text-sm" data-mode="edit"><i
+                                class="fa-solid fa-pen-to-square text-xs mr-1"></i>Edit Profile</button></div>
                 </form>
             </section>
+
+            <footer class="mt-auto pt-10 pb-2">
+                <div class="border-t border-gray-200 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center space-x-2">
+                        <div
+                            class="w-8 h-8 bg-gradient-to-br from-tsu-blue to-tsu-blueDark rounded-lg flex items-center justify-center shadow-sm">
+                            <i class="fa-solid fa-building-columns text-tsu-gold text-xs"></i>
+                        </div>
+                        <span class="font-extrabold text-tsu-blue text-sm">OneVictoria</span>
+                    </div>
+                    <p class="text-xs text-gray-500">&copy; 2026 Municipality of Victoria. All rights reserved.</p>
+                    <div class="flex items-center space-x-4 text-xs text-gray-400 font-medium">
+                        <a href="#" class="hover:text-tsu-blue transition-colors">Privacy Policy</a>
+                        <a href="#" class="hover:text-tsu-blue transition-colors">Terms of Service</a>
+                        <a href="#" class="hover:text-tsu-blue transition-colors">Help Center</a>
+                    </div>
+                </div>
+            </footer>
         </main>
     </div>
 
-    <!-- Notification Dropdown (Fixed Position - Expandable) -->
     <div id="notification-dropdown"
         class="hidden fixed bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-[9999] flex flex-col transition-all duration-300"
         style="width: 320px; max-height: 60vh; right: 16px;" onclick="event.stopPropagation()">
 
-        <!-- Dropdown Header -->
         <div class="p-4 border-b border-gray-100 flex items-center justify-between shrink-0">
             <h3 class="font-extrabold text-base text-gray-800">
                 <i class="fa-solid fa-bell mr-2 text-tsu-blue"></i>Notifications
@@ -951,7 +1065,6 @@
             </div>
         </div>
 
-        <!-- Dropdown List (Scrollable) -->
         <div id="notification-dropdown-list" class="overflow-y-auto flex-1 divide-y divide-gray-50"
             style="max-height: 50vh;">
             <div class="text-center py-8 text-gray-400">
@@ -960,7 +1073,6 @@
             </div>
         </div>
 
-        <!-- Dropdown Footer - Show More / Show Less -->
         <div class="p-3 border-t border-gray-100 shrink-0">
             <button id="notification-toggle-more-btn" onclick="toggleMoreNotifications(); event.stopPropagation()"
                 class="w-full text-center text-xs text-tsu-blue hover:text-tsu-accent font-semibold py-2">
@@ -969,7 +1081,6 @@
         </div>
     </div>
 
-    <!-- Modals -->
     <div id="view-event-modal" onclick="if(event.target === this) toggleModal('view-event-modal')"
         class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl border border-gray-200 modal-enter relative">
@@ -1116,12 +1227,10 @@
                 class="w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-base hover:bg-gray-200 transition-colors shrink-0">Close</button>
         </div>
     </div>
-    <!-- Notification Detail Modal -->
     <div id="notification-detail-modal"
         class="fixed inset-0 bg-gray-900/70 backdrop-blur-sm hidden flex items-center justify-center p-4 z-[160]"
         onclick="if(event.target === this) closeNotificationDetail()">
         <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-gray-200 modal-enter overflow-hidden">
-            <!-- Header -->
             <div class="p-6 border-b border-gray-100">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
@@ -1141,28 +1250,21 @@
                         <i class="fa-solid fa-xmark text-xl"></i>
                     </button>
                 </div>
-                <!-- Status Badge -->
                 <div id="notif-detail-badge" class="mt-4"></div>
             </div>
 
-            <!-- Body -->
             <div class="p-6">
                 <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
                     <p id="notif-detail-message" class="text-sm text-gray-700 leading-relaxed whitespace-pre-line"></p>
                 </div>
 
-                <!-- Action Buttons -->
                 <div id="notif-detail-actions" class="mt-5 space-y-3">
-                    <!-- Dynamic action buttons will be inserted here -->
                 </div>
             </div>
 
-            <!-- Footer -->
             <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                 <button onclick="closeNotificationDetail()"
                     class="text-sm text-gray-600 font-semibold hover:text-gray-800 transition-colors flex items-center space-x-1">
-                    <!-- <i class="fa-solid fa-arrow-left text-xs"></i>
-                    <span>Close</span> -->
                 </button>
                 <span class="text-xs text-gray-400">
                     OneVictoria Notification
