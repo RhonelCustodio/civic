@@ -73,6 +73,8 @@ let selectedProfilePicFile = undefined,
 let notificationCount = 0,
   allNotifications = [],
   showingAllNotifications = false;
+let sessionCheckInterval = null;
+let currentSessionToken = null;
 
 // ===== DATE UTILITIES =====
 function formatShortDate(ts) {
@@ -407,6 +409,132 @@ function showPaymentInstructions(pr) {
 }
 
 // ===== SESSION MANAGEMENT =====
+function generateSessionToken() {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+async function enforceSingleSession(uid) {
+  if (!uid) return true;
+
+  try {
+    const userDoc = await getDoc(doc(db, "residents", uid));
+    if (!userDoc.exists()) return true;
+
+    const userData = userDoc.data();
+    const storedToken = userData.sessionToken;
+
+    if (storedToken && storedToken !== currentSessionToken) {
+      const lastActive = userData.lastActive?.toDate
+        ? userData.lastActive.toDate()
+        : new Date(0);
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
+      if (lastActive > fiveMinutesAgo) {
+        window.showAlert(
+          "Session Terminated",
+          "This account is already logged in on another device. For security reasons, only one device can be active at a time.",
+          "error",
+        );
+
+        await signOut(auth);
+        clearUserSession();
+        loggedInUser = null;
+
+        document.getElementById("auth-screen")?.classList.remove("hidden");
+        document.getElementById("dashboard")?.classList.add("hidden");
+        hideNotificationBell();
+
+        try {
+          await updateDoc(doc(db, "residents", uid), {
+            sessionToken: null,
+            isOnline: false,
+          });
+        } catch (e) {
+          console.error("Error clearing session:", e);
+        }
+
+        return false;
+      }
+    }
+
+    currentSessionToken = generateSessionToken();
+    await updateDoc(doc(db, "residents", uid), {
+      sessionToken: currentSessionToken,
+      lastActive: serverTimestamp(),
+      isOnline: true,
+      lastDeviceCheck: serverTimestamp(),
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Session enforcement error:", error);
+    return true;
+  }
+}
+
+function startSessionHeartbeat(uid) {
+  if (sessionCheckInterval) {
+    clearInterval(sessionCheckInterval);
+  }
+
+  sessionCheckInterval = setInterval(async () => {
+    if (!loggedInUser?.id) {
+      clearInterval(sessionCheckInterval);
+      return;
+    }
+
+    try {
+      const userDoc = await getDoc(doc(db, "residents", uid));
+      if (!userDoc.exists()) return;
+
+      const userData = userDoc.data();
+      const storedToken = userData.sessionToken;
+
+      if (storedToken && storedToken !== currentSessionToken) {
+        clearInterval(sessionCheckInterval);
+
+        window.showAlert(
+          "Session Expired",
+          "This account has been logged in from another device. You have been automatically logged out.",
+          "error",
+        );
+
+        await signOut(auth);
+        clearUserSession();
+        loggedInUser = null;
+
+        document.getElementById("auth-screen")?.classList.remove("hidden");
+        document.getElementById("dashboard")?.classList.add("hidden");
+        hideNotificationBell();
+
+        const modals = document.querySelectorAll(".modal");
+        modals.forEach((modal) => modal.classList.add("hidden"));
+
+        if (participantsUnsubscribe) participantsUnsubscribe();
+        if (notificationsUnsubscribe) notificationsUnsubscribe();
+        if (donationsUnsubscribe) donationsUnsubscribe();
+        if (volunteersUnsubscribe) volunteersUnsubscribe();
+        if (hoursUnsubscribe) hoursUnsubscribe();
+
+        return;
+      }
+
+      await updateDoc(doc(db, "residents", uid), {
+        lastActive: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Heartbeat error:", error);
+    }
+  }, 30000);
+}
+
+function stopSessionHeartbeat() {
+  if (sessionCheckInterval) {
+    clearInterval(sessionCheckInterval);
+    sessionCheckInterval = null;
+  }
+}
+
 function saveUserSession(ud) {
   try {
     const sd = {
@@ -419,7 +547,7 @@ function saveUserSession(ud) {
         : ud.lastActive,
     };
     localStorage.setItem("barangayUser", JSON.stringify(sd));
-  } catch (e) { }
+  } catch (e) {}
 }
 function clearUserSession() {
   try {
@@ -427,12 +555,12 @@ function clearUserSession() {
     sessionStorage.removeItem("userActiveTab");
     sessionStorage.removeItem("registeredEvents");
     sessionStorage.removeItem("completedEvents");
-  } catch (e) { }
+  } catch (e) {}
 }
 function saveActiveTab(t) {
   try {
     sessionStorage.setItem("userActiveTab", t);
-  } catch (e) { }
+  } catch (e) {}
 }
 function getSavedActiveTab() {
   try {
@@ -710,11 +838,26 @@ window.showConfirmPopup = function (title, text, cb) {
 async function setUserStatus(uid, status) {
   if (!uid) return;
   try {
-    await updateDoc(doc(db, "residents", uid), {
-      isOnline: status,
-      lastActive: serverTimestamp(),
-    });
-  } catch (e) { }
+    if (status) {
+      currentSessionToken = generateSessionToken();
+      await updateDoc(doc(db, "residents", uid), {
+        isOnline: status,
+        lastActive: serverTimestamp(),
+        sessionToken: currentSessionToken,
+        lastDeviceCheck: serverTimestamp(),
+      });
+    } else {
+      currentSessionToken = null;
+      await updateDoc(doc(db, "residents", uid), {
+        isOnline: status,
+        lastActive: serverTimestamp(),
+        sessionToken: null,
+        lastDeviceCheck: serverTimestamp(),
+      });
+    }
+  } catch (e) {
+    console.error("Status update error:", e);
+  }
 }
 async function loadUserRegisteredEvents() {
   if (!loggedInUser?.id) return;
@@ -853,6 +996,7 @@ document
         password: pass,
         isOnline: false,
         profilePic: "",
+        sessionToken: null,
         createdAt: serverTimestamp(),
         lastActive: serverTimestamp(),
         lastProfileUpdate: null,
@@ -884,7 +1028,7 @@ document
 document.getElementById("login-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const email =
-    document.getElementById("login-email")?.value.trim().toLowerCase() || "",
+      document.getElementById("login-email")?.value.trim().toLowerCase() || "",
     pass = document.getElementById("login-password")?.value || "";
   if (!email || !pass) {
     window.showAlert("Error", "Enter email and password.", "error");
@@ -900,6 +1044,13 @@ document.getElementById("login-form")?.addEventListener("submit", async (e) => {
       await signOut(auth);
       return;
     }
+
+    const sessionValid = await enforceSingleSession(uc.user.uid);
+    if (!sessionValid) {
+      hideLoading();
+      return;
+    }
+
     const snap = await getDoc(doc(db, "residents", uc.user.uid));
     if (snap.exists()) {
       loggedInUser = { id: snap.id, ...snap.data() };
@@ -909,6 +1060,9 @@ document.getElementById("login-form")?.addEventListener("submit", async (e) => {
       await loadUserRegisteredEvents();
       setupParticipantsListener();
       initializeAllUserListeners();
+
+      startSessionHeartbeat(loggedInUser.id);
+
       document.getElementById("auth-screen")?.classList.add("hidden");
       document.getElementById("dashboard")?.classList.remove("hidden");
       showNotificationBell();
@@ -933,11 +1087,9 @@ document.getElementById("login-form")?.addEventListener("submit", async (e) => {
 function initializeAllUserListeners() {
   if (!loggedInUser?.id) return;
 
-  // Unsubscribe from existing listeners
   if (donationsUnsubscribe) donationsUnsubscribe();
   if (volunteersUnsubscribe) volunteersUnsubscribe();
 
-  // Donations real-time listener - FIXED: Removed orderBy to avoid composite index requirement
   donationsUnsubscribe = onSnapshot(
     query(collection(db, "donations"), where("donorId", "==", loggedInUser.id)),
     (snap) => {
@@ -949,7 +1101,6 @@ function initializeAllUserListeners() {
         return;
       }
 
-      // Sort manually in JavaScript (newest first)
       const donations = [];
       snap.forEach((d) => {
         donations.push({ id: d.id, ...d.data() });
@@ -989,15 +1140,9 @@ function initializeAllUserListeners() {
     },
     (error) => {
       console.error("Donations listener error:", error);
-      if (error.code === "failed-precondition") {
-        console.warn(
-          "Composite index required for donations. Create index in Firebase Console: donations > donorId Ascending, createdAt Descending",
-        );
-      }
     },
   );
 
-  // Volunteers real-time listener - FIXED: Removed orderBy to avoid composite index requirement
   volunteersUnsubscribe = onSnapshot(
     query(
       collection(db, "volunteers"),
@@ -1012,7 +1157,6 @@ function initializeAllUserListeners() {
         return;
       }
 
-      // Sort manually in JavaScript (newest first)
       const volunteers = [];
       snap.forEach((d) => {
         volunteers.push({ id: d.id, ...d.data() });
@@ -1051,11 +1195,6 @@ function initializeAllUserListeners() {
     },
     (error) => {
       console.error("Volunteers listener error:", error);
-      if (error.code === "failed-precondition") {
-        console.warn(
-          "Composite index required for volunteers. Create index in Firebase Console: volunteers > residentId Ascending, createdAt Descending",
-        );
-      }
     },
   );
 }
@@ -1121,9 +1260,9 @@ function renderNotificationDropdown() {
   const unreadSpan = document.getElementById("dropdown-unread-count");
   const toggleBtn = document.getElementById("notification-toggle-more-btn");
   const dropdown = document.getElementById("notification-dropdown");
-  
+
   if (!container) return;
-  
+
   if (unreadSpan) {
     if (notificationCount > 0) {
       unreadSpan.textContent = `${notificationCount} new`;
@@ -1132,7 +1271,7 @@ function renderNotificationDropdown() {
       unreadSpan.classList.add("hidden");
     }
   }
-  
+
   if (allNotifications.length === 0) {
     container.innerHTML = `<div class="text-center py-10">
       <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -1144,34 +1283,35 @@ function renderNotificationDropdown() {
     if (toggleBtn) toggleBtn.classList.add("hidden");
     return;
   }
-  
+
   if (toggleBtn) toggleBtn.classList.remove("hidden");
-  
+
   const notificationsToShow = showingAllNotifications
     ? allNotifications
     : allNotifications.slice(0, 5);
   const hasMore = allNotifications.length > 5;
-  
+
   if (toggleBtn) {
     if (showingAllNotifications) {
-      toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-up mr-1"></i> Show Less';
+      toggleBtn.innerHTML =
+        '<i class="fa-solid fa-chevron-up mr-1"></i> Show Less';
     } else if (hasMore) {
       toggleBtn.innerHTML = `<i class="fa-solid fa-chevron-down mr-1"></i> See All (${allNotifications.length})`;
     } else {
       toggleBtn.classList.add("hidden");
     }
   }
-  
+
   if (dropdown) {
     dropdown.style.maxHeight = showingAllNotifications ? "85vh" : "60vh";
     container.style.maxHeight = showingAllNotifications ? "75vh" : "50vh";
   }
-  
+
   let html = "";
   notificationsToShow.forEach((notif) => {
     let iconBg = "bg-blue-50 text-blue-600",
       icon = "fa-bell";
-    
+
     switch (notif.type) {
       case "volunteer_approved":
         iconBg = "bg-emerald-50 text-emerald-600";
@@ -1194,14 +1334,13 @@ function renderNotificationDropdown() {
         icon = "fa-clock";
         break;
     }
-    
+
     const isUnread = !notif.read;
     const timeDisplay = notif.createdAt
       ? formatRelativeTime(notif.createdAt)
       : "Just now";
-    
-    // Make notifications clickable - opens detail modal
-    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || 'default'}')" 
+
+    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || "default"}')" 
       class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"} border-b border-gray-100 last:border-b-0 group">
       <div class="flex items-start space-x-3">
         <div class="w-10 h-10 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
@@ -1225,7 +1364,7 @@ function renderNotificationDropdown() {
       </div>
     </div>`;
   });
-  
+
   container.innerHTML = html;
 }
 
@@ -1241,44 +1380,36 @@ window.toggleNotificationDropdown = function () {
 
   if (dropdown.classList.contains("hidden")) {
     const rect = bellBtn.getBoundingClientRect();
-    const dropdownWidth = 320; // Width of dropdown
+    const dropdownWidth = 320;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // Calculate horizontal position
     let leftPosition = rect.right - dropdownWidth;
 
-    // If dropdown would go off the right edge, align it to the right edge of the bell button
     if (leftPosition < 10) {
       leftPosition = 10;
     }
 
-    // If dropdown would go off the left edge, align it to the left
     if (leftPosition + dropdownWidth > viewportWidth - 10) {
       leftPosition = viewportWidth - dropdownWidth - 10;
     }
 
-    // Calculate vertical position
     let topPosition = rect.bottom + 8;
 
-    // If dropdown would go off the bottom of the screen, show it above the bell
-    const dropdownHeight = 400; // Approximate max height
+    const dropdownHeight = 400;
     if (topPosition + dropdownHeight > viewportHeight) {
       topPosition = rect.top - dropdownHeight - 8;
-      // If it would go off the top, just show at the top with some padding
       if (topPosition < 10) {
         topPosition = 10;
       }
     }
 
-    // Apply positions
     dropdown.style.position = "fixed";
     dropdown.style.top = topPosition + "px";
     dropdown.style.left = leftPosition + "px";
     dropdown.style.right = "auto";
     dropdown.style.bottom = "auto";
 
-    // For mobile devices (screen width < 640px), center the dropdown
     if (viewportWidth < 640) {
       dropdown.style.left = "50%";
       dropdown.style.transform = "translateX(-50%)";
@@ -1292,17 +1423,14 @@ window.toggleNotificationDropdown = function () {
     renderNotificationDropdown();
     dropdown.classList.remove("hidden");
 
-    // Add click outside listener
     setTimeout(() => {
       document.addEventListener("click", closeNotificationOnClickOutside);
     }, 100);
-
   } else {
     closeNotificationDropdown();
   }
 };
 
-// Helper function to close notification dropdown
 function closeNotificationDropdown() {
   const dropdown = document.getElementById("notification-dropdown");
   if (dropdown) {
@@ -1312,7 +1440,6 @@ function closeNotificationDropdown() {
   document.removeEventListener("click", closeNotificationOnClickOutside);
 }
 
-// Close dropdown when clicking outside
 function closeNotificationOnClickOutside(e) {
   const dropdown = document.getElementById("notification-dropdown");
   const bellBtn = document.getElementById("notification-bell-btn");
@@ -1328,40 +1455,35 @@ function closeNotificationOnClickOutside(e) {
   }
 }
 
-// Update notification click handler to close dropdown properly
 window.handleNotificationClick = async function (notifId, type) {
-  // Mark as read
   await window.markNotificationAsRead(notifId);
-
-  // Close the dropdown
   closeNotificationDropdown();
 
-  // Navigate to the appropriate tab based on notification type
   switch (type) {
     case "volunteer_approved":
     case "volunteer_rejected":
       window.switchTab("volunteers");
       break;
-
     case "donation_confirmed":
     case "donation_rejected":
       window.switchTab("donations");
       break;
-
     case "hours_credited":
       window.switchTab("hours");
       break;
-
     default:
       window.switchTab("notifications");
       break;
   }
 
-  // Show a brief alert with the notification message
-  const notif = allNotifications.find(n => n.id === notifId);
+  const notif = allNotifications.find((n) => n.id === notifId);
   if (notif) {
     setTimeout(() => {
-      window.showAlert(notif.title || "Notification", notif.message || "", "success");
+      window.showAlert(
+        notif.title || "Notification",
+        notif.message || "",
+        "success",
+      );
     }, 500);
   }
 };
@@ -1398,51 +1520,15 @@ window.markAllNotificationsAsRead = async function () {
   }
 };
 
-document.addEventListener("click", function (e) {
-  const dropdown = document.getElementById("notification-dropdown");
-  const bellBtn = document.getElementById("notification-bell-btn");
-  if (
-    dropdown &&
-    !dropdown.classList.contains("hidden") &&
-    !dropdown.contains(e.target) &&
-    bellBtn &&
-    !bellBtn.contains(e.target)
-  ) {
-    dropdown.classList.add("hidden");
-    showingAllNotifications = false;
-  }
-});
-
-// ===== NOTIFICATION DETAIL MODAL =====
-window.handleNotificationClick = async function(notifId, type) {
-  // Find the notification
-  const notif = allNotifications.find(n => n.id === notifId);
-  if (!notif) return;
-  
-  // Mark as read
-  await window.markNotificationAsRead(notifId);
-  
-  // Close the dropdown
-  const dropdown = document.getElementById("notification-dropdown");
-  if (dropdown) {
-    dropdown.classList.add("hidden");
-    showingAllNotifications = false;
-  }
-  
-  // Show the notification detail modal
-  showNotificationDetail(notif);
-};
-
 function showNotificationDetail(notif) {
   const modal = document.getElementById("notification-detail-modal");
   if (!modal) return;
-  
-  // Set icon and colors based on notification type
+
   const iconContainer = document.getElementById("notif-detail-icon");
   const iconElement = document.getElementById("notif-detail-icon-inner");
   let iconBg = "bg-blue-50 text-blue-600";
   let iconClass = "fa-bell";
-  
+
   switch (notif.type) {
     case "volunteer_approved":
       iconBg = "bg-emerald-50 text-emerald-600";
@@ -1465,74 +1551,74 @@ function showNotificationDetail(notif) {
       iconClass = "fa-clock";
       break;
   }
-  
+
   if (iconContainer) {
     iconContainer.className = `w-12 h-12 ${iconBg} rounded-full flex items-center justify-center shadow-md`;
   }
   if (iconElement) {
     iconElement.className = `fa-solid ${iconClass} text-lg`;
   }
-  
-  // Set title
+
   const titleEl = document.getElementById("notif-detail-title");
   if (titleEl) titleEl.textContent = notif.title || "Notification";
-  
-  // Set time
+
   const timeEl = document.getElementById("notif-detail-time");
   if (timeEl) {
-    const timeDisplay = notif.createdAt 
+    const timeDisplay = notif.createdAt
       ? formatFullDateTime(notif.createdAt)
       : "Just now";
     timeEl.innerHTML = `<i class="fa-solid fa-clock mr-1"></i>${timeDisplay}`;
   }
-  
-  // Set message
+
   const messageEl = document.getElementById("notif-detail-message");
-  if (messageEl) messageEl.textContent = notif.message || "No additional details available.";
-  
-  // Set badge
+  if (messageEl)
+    messageEl.textContent = notif.message || "No additional details available.";
+
   const badgeEl = document.getElementById("notif-detail-badge");
   if (badgeEl) {
     let badgeHtml = "";
     let badgeClass = "";
-    
+
     switch (notif.type) {
       case "volunteer_approved":
         badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200";
-        badgeHtml = '<i class="fa-solid fa-circle-check mr-1.5"></i> Volunteer Application Approved';
+        badgeHtml =
+          '<i class="fa-solid fa-circle-check mr-1.5"></i> Volunteer Application Approved';
         break;
       case "volunteer_rejected":
         badgeClass = "bg-red-100 text-red-800 border-red-200";
-        badgeHtml = '<i class="fa-solid fa-circle-xmark mr-1.5"></i> Volunteer Application Rejected';
+        badgeHtml =
+          '<i class="fa-solid fa-circle-xmark mr-1.5"></i> Volunteer Application Rejected';
         break;
       case "donation_confirmed":
         badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200";
-        badgeHtml = '<i class="fa-solid fa-circle-check mr-1.5"></i> Donation Confirmed';
+        badgeHtml =
+          '<i class="fa-solid fa-circle-check mr-1.5"></i> Donation Confirmed';
         break;
       case "donation_rejected":
         badgeClass = "bg-red-100 text-red-800 border-red-200";
-        badgeHtml = '<i class="fa-solid fa-circle-xmark mr-1.5"></i> Donation Rejected';
+        badgeHtml =
+          '<i class="fa-solid fa-circle-xmark mr-1.5"></i> Donation Rejected';
         break;
       case "hours_credited":
         badgeClass = "bg-purple-100 text-purple-800 border-purple-200";
-        badgeHtml = '<i class="fa-solid fa-clock mr-1.5"></i> Service Hours Credited';
+        badgeHtml =
+          '<i class="fa-solid fa-clock mr-1.5"></i> Service Hours Credited';
         break;
       default:
         badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
-        badgeHtml = '<i class="fa-solid fa-bell mr-1.5"></i> General Notification';
+        badgeHtml =
+          '<i class="fa-solid fa-bell mr-1.5"></i> General Notification';
     }
-    
+
     badgeEl.innerHTML = `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold border ${badgeClass}">${badgeHtml}</span>`;
   }
-  
-  // Set action buttons - NOW WITH SEPARATE FUNCTIONS THAT ONLY NAVIGATE WHEN CLICKED
+
   const actionsEl = document.getElementById("notif-detail-actions");
   if (actionsEl) {
     let actionsHtml = "";
-    
-    // "Go to Related Section" button - only navigates when user explicitly clicks this
     let viewButtonText = "Go to Related Section";
-    
+
     switch (notif.type) {
       case "volunteer_approved":
       case "volunteer_rejected":
@@ -1572,31 +1658,21 @@ function showNotificationDetail(notif) {
           <i class="fa-solid fa-arrow-right text-xs"></i>
         </button>`;
     }
-    
-    // "Close" button
+
     actionsHtml += `<button onclick="closeNotificationDetail()" 
       class="w-full bg-gray-100 text-gray-700 font-semibold py-2.5 px-4 rounded-xl text-sm hover:bg-gray-200 transition-all flex items-center justify-center space-x-2">
       <i class="fa-solid fa-xmark text-xs"></i>
       <span>Close</span>
     </button>`;
-    
+
     actionsEl.innerHTML = actionsHtml;
   }
-  
-  // Show the modal
+
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 }
 
-window.closeNotificationDetail = function() {
-  const modal = document.getElementById("notification-detail-modal");
-  if (modal) {
-    modal.classList.add("hidden");
-    document.body.style.overflow = "";
-  }
-};  
-
-window.closeNotificationDetail = function() {
+window.closeNotificationDetail = function () {
   const modal = document.getElementById("notification-detail-modal");
   if (modal) {
     modal.classList.add("hidden");
@@ -1604,38 +1680,84 @@ window.closeNotificationDetail = function() {
   }
 };
 
-window.updateNotifDetailReadStatus = function() {
-  // Update the badge count after marking as read
+window.updateNotifDetailReadStatus = function () {
   notificationCount = Math.max(0, notificationCount - 1);
   updateNotificationBadge();
   renderNotificationDropdown();
-  
-  // Show success message
-  window.showAlert("Marked as Read", "Notification has been marked as read.", "success");
+  window.showAlert(
+    "Marked as Read",
+    "Notification has been marked as read.",
+    "success",
+  );
 };
 
-// ===== MOBILE NOTIFICATION FUNCTIONS =====
 let mobileShowingAllNotifications = false;
 
-function updateMobileNotificationBadge() {
-  const badge = document.getElementById("mobile-notification-count-badge");
-  if (!badge) return;
-  if (notificationCount > 0) {
-    badge.textContent = notificationCount > 99 ? "99+" : notificationCount;
-    badge.classList.remove("hidden");
+window.toggleMobileNotificationDropdown = function () {
+  const dropdown = document.getElementById("mobile-notification-dropdown");
+  const bellBtn = document.getElementById("mobile-notification-bell-btn");
+  const desktopDropdown = document.getElementById("notification-dropdown");
+
+  if (!dropdown || !bellBtn) return;
+
+  if (desktopDropdown && !desktopDropdown.classList.contains("hidden")) {
+    desktopDropdown.classList.add("hidden");
+    showingAllNotifications = false;
+  }
+
+  if (dropdown.classList.contains("hidden")) {
+    dropdown.style.top = "60px";
+    dropdown.style.left = "50%";
+    dropdown.style.transform = "translateX(-50%)";
+
+    mobileShowingAllNotifications = false;
+    renderMobileNotificationDropdown();
+    dropdown.classList.remove("hidden");
+
+    setTimeout(() => {
+      document.addEventListener("click", closeMobileNotificationOnClickOutside);
+    }, 100);
   } else {
-    badge.classList.add("hidden");
+    closeMobileNotificationDropdown();
+  }
+};
+
+function closeMobileNotificationDropdown() {
+  const dropdown = document.getElementById("mobile-notification-dropdown");
+  if (dropdown) {
+    dropdown.classList.add("hidden");
+    mobileShowingAllNotifications = false;
+  }
+  document.removeEventListener("click", closeMobileNotificationOnClickOutside);
+}
+
+function closeMobileNotificationOnClickOutside(e) {
+  const dropdown = document.getElementById("mobile-notification-dropdown");
+  const bellBtn = document.getElementById("mobile-notification-bell-btn");
+
+  if (
+    dropdown &&
+    !dropdown.classList.contains("hidden") &&
+    !dropdown.contains(e.target) &&
+    bellBtn &&
+    !bellBtn.contains(e.target)
+  ) {
+    closeMobileNotificationDropdown();
   }
 }
 
 function renderMobileNotificationDropdown() {
-  const container = document.getElementById("mobile-notification-dropdown-list");
+  const container = document.getElementById(
+    "mobile-notification-dropdown-list",
+  );
   const unreadSpan = document.getElementById("mobile-dropdown-unread-count");
-  const toggleBtn = document.getElementById("mobile-notification-toggle-more-btn");
+  const toggleBtn = document.getElementById(
+    "mobile-notification-toggle-more-btn",
+  );
   const dropdown = document.getElementById("mobile-notification-dropdown");
-  
+
   if (!container) return;
-  
+
   if (unreadSpan) {
     if (notificationCount > 0) {
       unreadSpan.textContent = `${notificationCount} new`;
@@ -1644,7 +1766,7 @@ function renderMobileNotificationDropdown() {
       unreadSpan.classList.add("hidden");
     }
   }
-  
+
   if (allNotifications.length === 0) {
     container.innerHTML = `<div class="text-center py-10">
       <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -1656,34 +1778,35 @@ function renderMobileNotificationDropdown() {
     if (toggleBtn) toggleBtn.classList.add("hidden");
     return;
   }
-  
+
   if (toggleBtn) toggleBtn.classList.remove("hidden");
-  
+
   const notificationsToShow = mobileShowingAllNotifications
     ? allNotifications
     : allNotifications.slice(0, 5);
   const hasMore = allNotifications.length > 5;
-  
+
   if (toggleBtn) {
     if (mobileShowingAllNotifications) {
-      toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-up mr-1"></i> Show Less';
+      toggleBtn.innerHTML =
+        '<i class="fa-solid fa-chevron-up mr-1"></i> Show Less';
     } else if (hasMore) {
       toggleBtn.innerHTML = `<i class="fa-solid fa-chevron-down mr-1"></i> See All (${allNotifications.length})`;
     } else {
       toggleBtn.classList.add("hidden");
     }
   }
-  
+
   if (dropdown) {
     dropdown.style.maxHeight = mobileShowingAllNotifications ? "85vh" : "60vh";
     container.style.maxHeight = mobileShowingAllNotifications ? "75vh" : "50vh";
   }
-  
+
   let html = "";
   notificationsToShow.forEach((notif) => {
     let iconBg = "bg-blue-50 text-blue-600",
       icon = "fa-bell";
-    
+
     switch (notif.type) {
       case "volunteer_approved":
         iconBg = "bg-emerald-50 text-emerald-600";
@@ -1706,13 +1829,13 @@ function renderMobileNotificationDropdown() {
         icon = "fa-clock";
         break;
     }
-    
+
     const isUnread = !notif.read;
     const timeDisplay = notif.createdAt
       ? formatRelativeTime(notif.createdAt)
       : "Just now";
-    
-    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || 'default'}'); closeMobileNotificationDropdown();" 
+
+    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || "default"}'); closeMobileNotificationDropdown();" 
       class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"} border-b border-gray-100 last:border-b-0">
       <div class="flex items-start space-x-3">
         <div class="w-9 h-9 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm">
@@ -1731,64 +1854,8 @@ function renderMobileNotificationDropdown() {
       </div>
     </div>`;
   });
-  
+
   container.innerHTML = html;
-}
-
-window.toggleMobileNotificationDropdown = function () {
-  const dropdown = document.getElementById("mobile-notification-dropdown");
-  const bellBtn = document.getElementById("mobile-notification-bell-btn");
-  const desktopDropdown = document.getElementById("notification-dropdown");
-  
-  if (!dropdown || !bellBtn) return;
-  
-  // Close desktop dropdown if open
-  if (desktopDropdown && !desktopDropdown.classList.contains("hidden")) {
-    desktopDropdown.classList.add("hidden");
-    showingAllNotifications = false;
-  }
-  
-  if (dropdown.classList.contains("hidden")) {
-    // Position the dropdown centered on screen
-    dropdown.style.top = "60px";
-    dropdown.style.left = "50%";
-    dropdown.style.transform = "translateX(-50%)";
-    
-    mobileShowingAllNotifications = false;
-    renderMobileNotificationDropdown();
-    dropdown.classList.remove("hidden");
-    
-    // Add click outside listener
-    setTimeout(() => {
-      document.addEventListener("click", closeMobileNotificationOnClickOutside);
-    }, 100);
-  } else {
-    closeMobileNotificationDropdown();
-  }
-};
-
-function closeMobileNotificationDropdown() {
-  const dropdown = document.getElementById("mobile-notification-dropdown");
-  if (dropdown) {
-    dropdown.classList.add("hidden");
-    mobileShowingAllNotifications = false;
-  }
-  document.removeEventListener("click", closeMobileNotificationOnClickOutside);
-}
-
-function closeMobileNotificationOnClickOutside(e) {
-  const dropdown = document.getElementById("mobile-notification-dropdown");
-  const bellBtn = document.getElementById("mobile-notification-bell-btn");
-  
-  if (
-    dropdown &&
-    !dropdown.classList.contains("hidden") &&
-    !dropdown.contains(e.target) &&
-    bellBtn &&
-    !bellBtn.contains(e.target)
-  ) {
-    closeMobileNotificationDropdown();
-  }
 }
 
 window.toggleMoreMobileNotifications = function () {
@@ -2596,7 +2663,6 @@ eventsUnsubscribe = onSnapshot(
 );
 
 // ===== DONATIONS, HOURS, VOLUNTEERS - FIXED REAL-TIME LISTENERS =====
-// Public donations (all users can see)
 onSnapshot(
   query(collection(db, "donations"), orderBy("createdAt", "desc")),
   (snap) => {
@@ -2615,7 +2681,6 @@ onSnapshot(
   },
 );
 
-// Public service hours leaderboard
 onSnapshot(
   query(collection(db, "service_hours"), orderBy("hours", "desc")),
   (snap) => {
@@ -2638,7 +2703,6 @@ onSnapshot(
   },
 );
 
-// User's personal service hours with real-time updates
 function initUserHourTracker() {
   if (!loggedInUser?.id) return;
   if (hoursUnsubscribe) hoursUnsubscribe();
@@ -2726,12 +2790,12 @@ document
         experience,
         verificationFile: verificationData
           ? {
-            fileName: selectedSkillVerificationFile.name,
-            fileType: selectedSkillVerificationFile.type,
-            fileSize: selectedSkillVerificationFile.size,
-            data: verificationData,
-            uploadedAt: new Date().toISOString(),
-          }
+              fileName: selectedSkillVerificationFile.name,
+              fileType: selectedSkillVerificationFile.type,
+              fileSize: selectedSkillVerificationFile.size,
+              data: verificationData,
+              uploadedAt: new Date().toISOString(),
+            }
           : null,
         notes,
         availability,
@@ -2928,6 +2992,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!user.emailVerified) {
         clearUserSession();
         loggedInUser = null;
+        stopSessionHeartbeat();
         document.getElementById("auth-screen")?.classList.remove("hidden");
         document.getElementById("dashboard")?.classList.add("hidden");
         hideNotificationBell();
@@ -2938,8 +3003,23 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const snap = await getDoc(doc(db, "residents", user.uid));
         if (snap.exists()) {
-          loggedInUser = { id: snap.id, ...snap.data() };
+          const userData = snap.data();
+          const savedSession = localStorage.getItem("barangayUser");
+
+          if (savedSession) {
+            try {
+              const parsedSession = JSON.parse(savedSession);
+              if (!currentSessionToken && userData.sessionToken) {
+                currentSessionToken = userData.sessionToken;
+              }
+            } catch (e) {
+              console.error("Session parse error:", e);
+            }
+          }
+
+          loggedInUser = { id: snap.id, ...userData };
           saveUserSession(loggedInUser);
+
           const se = sessionStorage.getItem("registeredEvents");
           if (se)
             try {
@@ -2959,6 +3039,9 @@ document.addEventListener("DOMContentLoaded", () => {
           showNotificationBell();
           updateUIWithUserData(loggedInUser);
           await setUserStatus(loggedInUser.id, true);
+
+          startSessionHeartbeat(loggedInUser.id);
+
           initUserHourTracker();
           await loadUserRegisteredEvents();
           setupParticipantsListener();
@@ -2968,6 +3051,7 @@ document.addEventListener("DOMContentLoaded", () => {
           setTimeout(() => window.switchTab(getSavedActiveTab()), 400);
         } else {
           clearUserSession();
+          stopSessionHeartbeat();
           await signOut(auth);
           hideLoading();
         }
@@ -2977,6 +3061,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       clearUserSession();
       loggedInUser = null;
+      stopSessionHeartbeat();
       document.getElementById("auth-screen")?.classList.remove("hidden");
       document.getElementById("dashboard")?.classList.add("hidden");
       hideNotificationBell();
@@ -2996,6 +3081,7 @@ window.addEventListener("beforeunload", () => {
     );
     setUserStatus(loggedInUser.id, false);
   }
+  stopSessionHeartbeat();
   if (participantsUnsubscribe) participantsUnsubscribe();
   if (notificationsUnsubscribe) notificationsUnsubscribe();
   if (donationsUnsubscribe) donationsUnsubscribe();
@@ -3030,7 +3116,6 @@ document.addEventListener("click", function (event) {
   }
 });
 
-// ===== Close sidebar on window resize (when switching to desktop) =====
 window.addEventListener("resize", function () {
   if (window.innerWidth >= 1024) {
     const sidebar = document.getElementById("sidebar");
@@ -3053,10 +3138,23 @@ window.hideLoading = hideLoading;
 window.triggerLogoutConfirmation = function () {
   window.showConfirmPopup("Log Out", "Are you sure?", async () => {
     showLoading("Logging out...");
-    if (loggedInUser?.id) await setUserStatus(loggedInUser.id, false);
+    stopSessionHeartbeat();
+    if (loggedInUser?.id) {
+      await setUserStatus(loggedInUser.id, false);
+      try {
+        await updateDoc(doc(db, "residents", loggedInUser.id), {
+          sessionToken: null,
+          isOnline: false,
+          lastActive: serverTimestamp(),
+        });
+      } catch (e) {
+        console.error("Clear session error:", e);
+      }
+    }
     await signOut(auth);
     clearUserSession();
     loggedInUser = null;
+    currentSessionToken = null;
     const loginForm = document.getElementById("login-form");
     const registerForm = document.getElementById("register-form");
     const loginEmail = document.getElementById("login-email");
@@ -3211,3 +3309,6 @@ window.markAllNotificationsAsRead = window.markAllNotificationsAsRead;
 window.handleNotificationClick = window.handleNotificationClick;
 window.closeNotificationDetail = window.closeNotificationDetail;
 window.updateNotifDetailReadStatus = window.updateNotifDetailReadStatus;
+window.toggleMobileNotificationDropdown =
+  window.toggleMobileNotificationDropdown;
+window.toggleMoreMobileNotifications = window.toggleMoreMobileNotifications;
