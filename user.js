@@ -2258,12 +2258,15 @@ onSnapshot(
   query(collection(db, "announcements"), orderBy("createdAt", "desc")),
   (snap) => {
     const container = document.getElementById("announcements-container");
-    if (!container) return;
+    const publicContainer = document.getElementById("public-announcements-container");
+    
     if (snap.empty) {
-      container.innerHTML =
-        '<div class="text-center py-16 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-bullhorn text-2xl text-gray-300"></i></div><p class="text-base text-gray-400">No announcements yet.</p><p class="text-xs text-gray-300 mt-1">Stay tuned for community updates</p></div>';
+      const emptyHtml = '<div class="text-center py-16 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-bullhorn text-2xl text-gray-300"></i></div><p class="text-base text-gray-400">No announcements yet.</p><p class="text-xs text-gray-300 mt-1">Stay tuned for community updates</p></div>';
+      if (container) container.innerHTML = emptyHtml;
+      if (publicContainer) publicContainer.innerHTML = emptyHtml;
       return;
     }
+    
     let html = "";
     snap.forEach((d) => {
       const a = d.data(),
@@ -2293,7 +2296,9 @@ onSnapshot(
       const escDt = exactTime.replace(/'/g, "\\'");
       html += `<div onclick="openAnnouncementDetails('${annId}','${escT}','${escD}','${escP}','${escDt}')" class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"><div class="p-5 sm:p-6"><div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-gradient-to-br from-tsu-blue to-tsu-dark rounded-xl flex items-center justify-center shadow-sm shrink-0"><i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i></div><div class="min-w-0"><h4 class="font-bold text-sm text-gray-900">Municipality of Victoria</h4><div class="flex items-center space-x-2 mt-1"><span class="text-[11px] text-gray-400" title="${exactTime}"><i class="fa-solid fa-clock mr-1"></i>${relativeTime}</span><span class="text-[11px] px-2 py-0.5 rounded-full font-bold ${badgeClass}"><i class="fa-solid ${badgeIcon} mr-1 text-[10px]"></i>${a.priority || "Notice"}</span></div></div></div></div><h3 class="text-base sm:text-lg font-extrabold text-gray-900 group-hover:text-tsu-blue transition-colors line-clamp-2 leading-snug mb-2">${a.title || "Untitled"}</h3><p class="text-sm text-gray-500 mt-2 line-clamp-3 leading-relaxed">${a.desc || ""}</p>${a.createdBy ? `<p class="text-xs text-gray-400 mt-3 flex items-center"><i class="fa-solid fa-user-circle mr-1.5"></i>Posted by: <span class="font-semibold text-gray-500 ml-1">${a.createdBy}</span></p>` : ""}</div><div class="px-5 sm:px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between"><span class="text-xs text-tsu-blue font-semibold group-hover:underline">Read More <i class="fa-solid fa-arrow-right ml-1.5 text-[11px]"></i></span><span class="text-[11px] text-gray-400"><i class="fa-solid fa-eye mr-1"></i>Tap to view</span></div></div>`;
     });
-    container.innerHTML = html;
+    
+    if (container) container.innerHTML = html;
+    if (publicContainer) publicContainer.innerHTML = html;
   },
 );
 window.openAnnouncementDetails = function (annId, title, desc, priority, date) {
@@ -2346,6 +2351,10 @@ window.handleUnregisterClick = function (event, eventId, eventTitle) {
   event.stopImmediatePropagation();
   window.unregisterFromEvent(eventId, eventTitle);
   return false;
+};
+
+window.promptLoginForEvent = function() {
+    window.showAlert("Authentication Required", "Please log in or create an account to join community events.", "error");
 };
 
 // ===== EVENTS RENDERER =====
@@ -2434,11 +2443,59 @@ function renderEvents() {
           actionBtn = `<button type="button" onclick="handleUnregisterClick(event, '${id}','${esc(ev.title)}')" class="text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all border border-red-200 w-full relative z-10"><i class="fa-solid fa-calendar-minus mr-1.5"></i>Cancel Registration</button>`;
         else
           actionBtn = `<button type="button" onclick="handleRegisterClick(event, '${id}','${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}')" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full relative z-10"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
-        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div>${ev.createdAt ? `<p class="text-[9px] text-gray-400 mt-2 flex items-center" title="${formatFullDateTime(ev.createdAt)}"><i class="fa-solid fa-clock mr-1"></i>Posted ${formatRelativeTime(ev.createdAt)}</p>` : ""}${ev.createdBy ? `<p class="text-[9px] text-gray-400">By: <span class="font-semibold text-gray-500">${ev.createdBy}</span></p>` : ""}</div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
+        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div>${ev.createdAt ? `<p class="text-[9px] text-gray-400 mt-2 flex items-center" title="${formatFullDateTime(ev.createdAt)}"><i class="fa-solid fa-clock mr-1"></i>Posted ${formatRelativeTime(ev.createdAt)}</p>` : ""}</div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
       });
       grid.innerHTML = html;
     },
   );
+}
+
+function renderPublicEvents() {
+  const publicGrid = document.getElementById("public-events-grid");
+  if (!publicGrid) return;
+
+  getDocs(query(collection(db, "events"), orderBy("date", "asc"))).then((snap) => {
+    if (snap.empty) {
+      publicGrid.innerHTML = '<div class="col-span-full text-center py-10 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-calendar-xmark text-2xl text-gray-300"></i></div><p class="text-sm text-gray-400">No upcoming events.</p></div>';
+      return;
+    }
+    let html = "";
+    snap.forEach((d) => {
+      const ev = d.data(), id = d.id;
+      const esc = (t) => {
+        const div = document.createElement("div");
+        div.textContent = t || "";
+        return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+      };
+      
+      const dateDisplay = ev.date || "TBA", timeDisplay = ev.time ? formatTimeDisplay(ev.time) : "";
+      const hasImage = ev.imageUrl && ev.imageUrl !== "";
+      let typeIcon, placeholderGradient;
+      switch (ev.type) {
+        case "Seminar": typeIcon = "fa-chalkboard-user"; placeholderGradient = "from-[#800000] to-[#A52A2A]"; break;
+        case "Workshop": typeIcon = "fa-toolbox"; placeholderGradient = "from-[#A52A2A] to-[#8B0000]"; break;
+        case "Meeting": typeIcon = "fa-users"; placeholderGradient = "from-[#B8960C] to-[#8B6914]"; break;
+        case "Sports": typeIcon = "fa-futbol"; placeholderGradient = "from-[#0D3B5C] to-[#0A2947]"; break;
+        case "Health": typeIcon = "fa-heart-pulse"; placeholderGradient = "from-[#8B0000] to-[#600000]"; break;
+        case "Training": typeIcon = "fa-graduation-cap"; placeholderGradient = "from-[#1A5276] to-[#0A2947]"; break;
+        case "Celebration": typeIcon = "fa-cake-candles"; placeholderGradient = "from-[#FFD700] to-[#B8960C]"; break;
+        case "Outreach": typeIcon = "fa-hand-holding-heart"; placeholderGradient = "from-[#0A2947] to-[#1A5276]"; break;
+        case "Environmental": typeIcon = "fa-leaf"; placeholderGradient = "from-[#2B0000] to-[#0A2947]"; break;
+        case "Cultural": typeIcon = "fa-masks-theater"; placeholderGradient = "from-[#FFD700] to-[#CCAC00]"; break;
+        case "Fundraising": typeIcon = "fa-sack-dollar"; placeholderGradient = "from-[#A52A2A] to-[#800000]"; break;
+        default: typeIcon = "fa-calendar-check"; placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+      }
+
+      const imageSection = hasImage
+        ? `<div class="relative h-40 overflow-hidden"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
+        : `<div class="relative h-40 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden"><i class="fa-solid ${typeIcon} text-white/30 text-6xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
+      
+      const actionBtn = `<button type="button" onclick="promptLoginForEvent()" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full relative z-10"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
+      
+      html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div></div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
+    });
+    publicGrid.innerHTML = html;
+  });
 }
 
 // ===== MY EVENTS RENDERER =====
@@ -2659,7 +2716,10 @@ window.unregisterFromEvent = function (eventId, eventTitle) {
 };
 eventsUnsubscribe = onSnapshot(
   query(collection(db, "events"), orderBy("date", "asc")),
-  () => renderEvents(),
+  () => {
+    renderEvents();
+    renderPublicEvents();
+  }
 );
 
 // ===== DONATIONS, HOURS, VOLUNTEERS - FIXED REAL-TIME LISTENERS =====
@@ -3300,6 +3360,7 @@ window.showEditRestrictionMessage = window.showEditRestrictionMessage;
 window.openAnnouncementDetails = window.openAnnouncementDetails;
 window.handleRegisterClick = window.handleRegisterClick;
 window.handleUnregisterClick = window.handleUnregisterClick;
+window.promptLoginForEvent = window.promptLoginForEvent;
 window.handleSkillVerificationUpload = window.handleSkillVerificationUpload;
 window.removeSkillVerification = window.removeSkillVerification;
 window.toggleNotificationDropdown = window.toggleNotificationDropdown;
@@ -3309,6 +3370,5 @@ window.markAllNotificationsAsRead = window.markAllNotificationsAsRead;
 window.handleNotificationClick = window.handleNotificationClick;
 window.closeNotificationDetail = window.closeNotificationDetail;
 window.updateNotifDetailReadStatus = window.updateNotifDetailReadStatus;
-window.toggleMobileNotificationDropdown =
-  window.toggleMobileNotificationDropdown;
+window.toggleMobileNotificationDropdown = window.toggleMobileNotificationDropdown;
 window.toggleMoreMobileNotifications = window.toggleMoreMobileNotifications;
