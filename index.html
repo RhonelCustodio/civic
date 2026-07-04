@@ -294,6 +294,17 @@
             }
         }
 
+        @media (max-width: 768px) {
+            .responsive-table {
+                font-size: 0.8rem;
+            }
+
+            .responsive-table th,
+            .responsive-table td {
+                padding: 0.6rem 0.85rem;
+            }
+        }
+
         @media (min-width: 1024px) {
             #sidebar {
                 position: static !important;
@@ -308,17 +319,6 @@
 
             #mobile-menu-btn {
                 display: none !important;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .responsive-table {
-                font-size: 0.8rem;
-            }
-
-            .responsive-table th,
-            .responsive-table td {
-                padding: 0.6rem 0.85rem;
             }
         }
 
@@ -423,6 +423,14 @@
 
         select#reg-gender option {
             color: #1F2937 !important;
+        }
+
+        /* Prevent status badges (Approved/Rejected) from breaking into two lines on mobile */
+        td span.rounded-full {
+            white-space: nowrap !important;
+            display: inline-flex !important;
+            align-items: center;
+            gap: 0.25rem;
         }
     </style>
 </head>
@@ -859,12 +867,12 @@
                     <p class="text-sm text-gray-500 mt-1.5">Track your contributions</p>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="card p-8 text-center bg-gradient-to-br from-tsu-light/50 to-white">
-                        <div class="w-16 h-16 bg-tsu-blue/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                            <i class="fa-solid fa-award text-3xl text-tsu-blue"></i>
+                    <div class="card p-5 sm:p-8 text-center bg-gradient-to-br from-tsu-light/50 to-white">
+                        <div class="w-12 h-12 sm:w-16 sm:h-16 bg-tsu-blue/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                            <i class="fa-solid fa-award text-2xl sm:text-3xl text-tsu-blue"></i>
                         </div>
                         <p class="text-xs font-semibold text-gray-500 uppercase">Total Hours</p>
-                        <p id="total-hours-display" class="text-3xl font-black text-tsu-blue my-4">0.0</p>
+                        <p id="total-hours-display" class="text-2xl sm:text-3xl font-black text-tsu-blue my-4">0.0</p>
                     </div>
                     <div class="lg:col-span-2 card p-7">
                         <h3 class="text-xl font-bold text-gray-800 mb-5">History</h3>
@@ -872,9 +880,9 @@
                             <table class="w-full text-base">
                                 <thead>
                                     <tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase">
-                                        <th class="px-5 py-3.5 text-left">Event</th>
-                                        <th class="px-5 py-3.5 text-left">Hours</th>
-                                        <th class="px-5 py-3.5 text-left">Status</th>
+                                        <th class="px-3 py-2 sm:px-5 sm:py-3.5 text-left text-[10px] sm:text-xs">Event</th>
+                                        <th class="px-3 py-2 sm:px-5 sm:py-3.5 text-left text-[10px] sm:text-xs">Hours</th>
+                                        <th class="px-3 py-2 sm:px-5 sm:py-3.5 text-left text-[10px] sm:text-xs">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="user-hours-tbody" class="divide-y divide-gray-100"></tbody>
@@ -926,7 +934,7 @@
                 </div>
             </section>
 
-            <section id="profile" class="tab-content hidden max-w-4xl mx-auto px-2 sm:px-6">
+            <section id="profile" class="tab-content hidden px-4 w-full sm:px-6 max-w-4xl mx-auto">
                 <div class="pb-4 mb-6 border-b-2 border-gray-200">
                     <h1 class="text-xl sm:text-2xl font-extrabold text-tsu-blue tracking-tight">Profile Settings</h1>
                     <p class="text-xs text-gray-500 mt-1">Manage your account</p>
