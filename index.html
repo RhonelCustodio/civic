@@ -294,6 +294,13 @@
             }
         }
 
+        /* Hide the notification bell in the sidebar on screens smaller than 1024px */
+        @media (max-width: 1023px) {
+            #sidebar #notification-bell-container {
+                display: none !important;
+            }
+        }
+
         @media (max-width: 768px) {
             .responsive-table {
                 font-size: 0.8rem;
