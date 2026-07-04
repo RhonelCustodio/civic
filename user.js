@@ -73,8 +73,8 @@ let selectedProfilePicFile = undefined,
 let notificationCount = 0,
   allNotifications = [],
   showingAllNotifications = false;
-let sessionCheckInterval = null;
-let currentSessionToken = null;
+let sessionCheckInterval = null,
+  currentSessionToken = null;
 
 // ===== DATE UTILITIES =====
 function formatShortDate(ts) {
@@ -91,13 +91,13 @@ function formatRelativeTime(ts) {
   const now = new Date();
   const date = ts.toDate ? ts.toDate() : new Date(ts);
   const diffMs = now - date;
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDays = Math.floor(diffHr / 24);
-  const diffWeeks = Math.floor(diffDays / 7);
-  const diffMonths = Math.floor(diffDays / 30);
-  const diffYears = Math.floor(diffDays / 365);
+  const diffSec = Math.floor(diffMs / 1000),
+    diffMin = Math.floor(diffSec / 60),
+    diffHr = Math.floor(diffMin / 60),
+    diffDays = Math.floor(diffHr / 24),
+    diffWeeks = Math.floor(diffDays / 7),
+    diffMonths = Math.floor(diffDays / 30),
+    diffYears = Math.floor(diffDays / 365);
   if (diffSec < 60) return "Just now";
   if (diffMin < 60)
     return `${diffMin} ${diffMin === 1 ? "minute" : "minutes"} ago`;
@@ -262,7 +262,7 @@ async function saveDonation(pr) {
       transactionId: pr.transactionId,
       paymentStatus: pr.status || STATUS.PENDING,
       paymentTimestamp: pr.timestamp || new Date().toISOString(),
-      status: pr.status === "completed" ? STATUS.PENDING : STATUS.PENDING,
+      status: STATUS.PENDING,
       createdAt: serverTimestamp(),
     };
     if (pr.bankDetails)
@@ -412,38 +412,30 @@ function showPaymentInstructions(pr) {
 function generateSessionToken() {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 9)}`;
 }
-
 async function enforceSingleSession(uid) {
   if (!uid) return true;
-
   try {
     const userDoc = await getDoc(doc(db, "residents", uid));
     if (!userDoc.exists()) return true;
-
     const userData = userDoc.data();
     const storedToken = userData.sessionToken;
-
     if (storedToken && storedToken !== currentSessionToken) {
       const lastActive = userData.lastActive?.toDate
         ? userData.lastActive.toDate()
         : new Date(0);
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-
       if (lastActive > fiveMinutesAgo) {
         window.showAlert(
           "Session Terminated",
           "This account is already logged in on another device. For security reasons, only one device can be active at a time.",
           "error",
         );
-
         await signOut(auth);
         clearUserSession();
         loggedInUser = null;
-
         document.getElementById("auth-screen")?.classList.remove("hidden");
         document.getElementById("dashboard")?.classList.add("hidden");
         hideNotificationBell();
-
         try {
           await updateDoc(doc(db, "residents", uid), {
             sessionToken: null,
@@ -452,11 +444,9 @@ async function enforceSingleSession(uid) {
         } catch (e) {
           console.error("Error clearing session:", e);
         }
-
         return false;
       }
     }
-
     currentSessionToken = generateSessionToken();
     await updateDoc(doc(db, "residents", uid), {
       sessionToken: currentSessionToken,
@@ -464,61 +454,47 @@ async function enforceSingleSession(uid) {
       isOnline: true,
       lastDeviceCheck: serverTimestamp(),
     });
-
     return true;
   } catch (error) {
     console.error("Session enforcement error:", error);
     return true;
   }
 }
-
 function startSessionHeartbeat(uid) {
-  if (sessionCheckInterval) {
-    clearInterval(sessionCheckInterval);
-  }
-
+  if (sessionCheckInterval) clearInterval(sessionCheckInterval);
   sessionCheckInterval = setInterval(async () => {
     if (!loggedInUser?.id) {
       clearInterval(sessionCheckInterval);
       return;
     }
-
     try {
       const userDoc = await getDoc(doc(db, "residents", uid));
       if (!userDoc.exists()) return;
-
       const userData = userDoc.data();
       const storedToken = userData.sessionToken;
-
       if (storedToken && storedToken !== currentSessionToken) {
         clearInterval(sessionCheckInterval);
-
         window.showAlert(
           "Session Expired",
           "This account has been logged in from another device. You have been automatically logged out.",
           "error",
         );
-
         await signOut(auth);
         clearUserSession();
         loggedInUser = null;
-
         document.getElementById("auth-screen")?.classList.remove("hidden");
         document.getElementById("dashboard")?.classList.add("hidden");
         hideNotificationBell();
-
-        const modals = document.querySelectorAll(".modal");
-        modals.forEach((modal) => modal.classList.add("hidden"));
-
+        document
+          .querySelectorAll(".modal")
+          .forEach((modal) => modal.classList.add("hidden"));
         if (participantsUnsubscribe) participantsUnsubscribe();
         if (notificationsUnsubscribe) notificationsUnsubscribe();
         if (donationsUnsubscribe) donationsUnsubscribe();
         if (volunteersUnsubscribe) volunteersUnsubscribe();
         if (hoursUnsubscribe) hoursUnsubscribe();
-
         return;
       }
-
       await updateDoc(doc(db, "residents", uid), {
         lastActive: serverTimestamp(),
       });
@@ -527,14 +503,12 @@ function startSessionHeartbeat(uid) {
     }
   }, 30000);
 }
-
 function stopSessionHeartbeat() {
   if (sessionCheckInterval) {
     clearInterval(sessionCheckInterval);
     sessionCheckInterval = null;
   }
 }
-
 function saveUserSession(ud) {
   try {
     const sd = {
@@ -631,7 +605,7 @@ window.handleProfilePicChange = function (event) {
   reader.readAsDataURL(file);
   window.showAlert(
     "Picture Selected",
-    "Click 'Save Profile Changes' to apply.",
+    "Click 'Save Changes' to apply.",
     "success",
   );
 };
@@ -667,7 +641,7 @@ window.removeProfilePic = function () {
       hideLoading();
       window.showAlert(
         "Marked for Removal",
-        "Click 'Save Profile Changes' to apply.",
+        "Click 'Save Changes' to apply.",
         "success",
       );
     }, 600);
@@ -770,6 +744,16 @@ function updateUIWithUserData(user) {
   if (ge) {
     ge.disabled = true;
     ge.classList.add("bg-gray-100", "cursor-not-allowed");
+  }
+  const ne = document.getElementById("prof-name");
+  if (ne) {
+    ne.disabled = true;
+    ne.classList.add("bg-gray-100", "cursor-not-allowed");
+  }
+  const ae = document.getElementById("prof-age");
+  if (ae) {
+    ae.disabled = true;
+    ae.classList.add("bg-gray-100", "cursor-not-allowed");
   }
   const pf = document.getElementById("prof-password");
   if (pf) pf.value = user.password || "";
@@ -1044,13 +1028,11 @@ document.getElementById("login-form")?.addEventListener("submit", async (e) => {
       await signOut(auth);
       return;
     }
-
     const sessionValid = await enforceSingleSession(uc.user.uid);
     if (!sessionValid) {
       hideLoading();
       return;
     }
-
     const snap = await getDoc(doc(db, "residents", uc.user.uid));
     if (snap.exists()) {
       loggedInUser = { id: snap.id, ...snap.data() };
@@ -1060,9 +1042,7 @@ document.getElementById("login-form")?.addEventListener("submit", async (e) => {
       await loadUserRegisteredEvents();
       setupParticipantsListener();
       initializeAllUserListeners();
-
       startSessionHeartbeat(loggedInUser.id);
-
       document.getElementById("auth-screen")?.classList.add("hidden");
       document.getElementById("dashboard")?.classList.remove("hidden");
       showNotificationBell();
@@ -1086,10 +1066,8 @@ document.getElementById("login-form")?.addEventListener("submit", async (e) => {
 // ===== INITIALIZE ALL REAL-TIME LISTENERS FOR USER DATA =====
 function initializeAllUserListeners() {
   if (!loggedInUser?.id) return;
-
   if (donationsUnsubscribe) donationsUnsubscribe();
   if (volunteersUnsubscribe) volunteersUnsubscribe();
-
   donationsUnsubscribe = onSnapshot(
     query(collection(db, "donations"), where("donorId", "==", loggedInUser.id)),
     (snap) => {
@@ -1100,7 +1078,6 @@ function initializeAllUserListeners() {
           '<tr><td colspan="5" class="text-center py-4 text-xs text-gray-400">No donations yet.</td></tr>';
         return;
       }
-
       const donations = [];
       snap.forEach((d) => {
         donations.push({ id: d.id, ...d.data() });
@@ -1114,35 +1091,23 @@ function initializeAllUserListeners() {
           : new Date(b.createdAt || 0);
         return timeB - timeA;
       });
-
       let html = "";
       donations.forEach((data) => {
         let statusBadge = "";
-        if (data.status === STATUS.APPROVED) {
+        if (data.status === STATUS.APPROVED)
           statusBadge =
             '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800">✓ Confirmed</span>';
-        } else if (data.status === STATUS.REJECTED) {
+        else if (data.status === STATUS.REJECTED)
           statusBadge =
             '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>';
-        } else {
+        else
           statusBadge =
             '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
-        }
-        html += `<tr class="border-b">
-          <td class="px-3 py-2 text-xs">${data.item || ""}</td>
-          <td class="px-3 py-2 text-xs">${data.purpose || ""}</td>
-          <td class="px-3 py-2 text-xs">${data.amount ? "₱" + parseFloat(data.amount).toLocaleString() : data.item || ""}</td>
-          <td class="px-3 py-2">${statusBadge}</td>
-          <td class="px-3 py-2 text-xs text-gray-400">${data.createdAt ? formatShortDate(data.createdAt) : "N/A"}</td>
-        </tr>`;
+        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.item || ""}</td><td class="px-3 py-2 text-xs">${data.purpose || ""}</td><td class="px-3 py-2 text-xs">${data.amount ? "₱" + parseFloat(data.amount).toLocaleString() : data.item || ""}</td><td class="px-3 py-2">${statusBadge}</td><td class="px-3 py-2 text-xs text-gray-400">${data.createdAt ? formatShortDate(data.createdAt) : "N/A"}</td></tr>`;
       });
       tbody.innerHTML = html;
     },
-    (error) => {
-      console.error("Donations listener error:", error);
-    },
   );
-
   volunteersUnsubscribe = onSnapshot(
     query(
       collection(db, "volunteers"),
@@ -1156,7 +1121,6 @@ function initializeAllUserListeners() {
           '<tr><td colspan="4" class="text-center py-4 text-xs text-gray-400">No volunteer applications yet.</td></tr>';
         return;
       }
-
       const volunteers = [];
       snap.forEach((d) => {
         volunteers.push({ id: d.id, ...d.data() });
@@ -1170,31 +1134,21 @@ function initializeAllUserListeners() {
           : new Date(b.createdAt || 0);
         return timeB - timeA;
       });
-
       let html = "";
       volunteers.forEach((data) => {
         let statusBadge = "";
-        if (data.status === STATUS.APPROVED) {
+        if (data.status === STATUS.APPROVED)
           statusBadge =
             '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800">✓ Approved</span>';
-        } else if (data.status === STATUS.REJECTED) {
+        else if (data.status === STATUS.REJECTED)
           statusBadge =
             '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>';
-        } else {
+        else
           statusBadge =
             '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
-        }
-        html += `<tr class="border-b">
-          <td class="px-3 py-2 text-xs">${data.skills || ""}</td>
-          <td class="px-3 py-2 text-xs">${data.availability || ""}</td>
-          <td class="px-3 py-2">${statusBadge}</td>
-          <td class="px-3 py-2 text-xs text-gray-400">${data.createdAt ? formatShortDate(data.createdAt) : "N/A"}</td>
-        </tr>`;
+        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.skills || ""}</td><td class="px-3 py-2 text-xs">${data.availability || ""}</td><td class="px-3 py-2">${statusBadge}</td><td class="px-3 py-2 text-xs text-gray-400">${data.createdAt ? formatShortDate(data.createdAt) : "N/A"}</td></tr>`;
       });
       tbody.innerHTML = html;
-    },
-    (error) => {
-      console.error("Volunteers listener error:", error);
     },
   );
 }
@@ -1208,16 +1162,14 @@ function hideNotificationBell() {
   const bell = document.getElementById("notification-bell-container");
   if (bell) bell.style.display = "none";
 }
-
 function initNotificationsListener() {
   if (!loggedInUser?.id) return;
   if (notificationsUnsubscribe) notificationsUnsubscribe();
-  const q = query(
-    collection(db, "notifications"),
-    where("residentId", "==", loggedInUser.id),
-  );
   notificationsUnsubscribe = onSnapshot(
-    q,
+    query(
+      collection(db, "notifications"),
+      where("residentId", "==", loggedInUser.id),
+    ),
     (snap) => {
       notificationCount = 0;
       allNotifications = [];
@@ -1237,32 +1189,36 @@ function initNotificationsListener() {
       });
       updateNotificationBadge();
       renderNotificationDropdown();
-    },
-    (error) => {
-      console.error("Notifications listener error:", error);
+      renderMobileNotificationDropdown();
     },
   );
 }
-
 function updateNotificationBadge() {
   const badge = document.getElementById("notification-count-badge");
-  if (!badge) return;
-  if (notificationCount > 0) {
-    badge.textContent = notificationCount > 99 ? "99+" : notificationCount;
-    badge.classList.remove("hidden");
-  } else {
-    badge.classList.add("hidden");
+  const mBadge = document.getElementById("mobile-notification-count-badge");
+  if (badge) {
+    if (notificationCount > 0) {
+      badge.textContent = notificationCount > 99 ? "99+" : notificationCount;
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  }
+  if (mBadge) {
+    if (notificationCount > 0) {
+      mBadge.textContent = notificationCount > 99 ? "99+" : notificationCount;
+      mBadge.classList.remove("hidden");
+    } else {
+      mBadge.classList.add("hidden");
+    }
   }
 }
-
 function renderNotificationDropdown() {
-  const container = document.getElementById("notification-dropdown-list");
-  const unreadSpan = document.getElementById("dropdown-unread-count");
-  const toggleBtn = document.getElementById("notification-toggle-more-btn");
-  const dropdown = document.getElementById("notification-dropdown");
-
+  const container = document.getElementById("notification-dropdown-list"),
+    unreadSpan = document.getElementById("dropdown-unread-count"),
+    toggleBtn = document.getElementById("notification-toggle-more-btn"),
+    dropdown = document.getElementById("notification-dropdown");
   if (!container) return;
-
   if (unreadSpan) {
     if (notificationCount > 0) {
       unreadSpan.textContent = `${notificationCount} new`;
@@ -1271,37 +1227,24 @@ function renderNotificationDropdown() {
       unreadSpan.classList.add("hidden");
     }
   }
-
   if (allNotifications.length === 0) {
-    container.innerHTML = `<div class="text-center py-10">
-      <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-        <i class="fa-solid fa-bell-slash text-xl text-gray-300"></i>
-      </div>
-      <p class="text-sm text-gray-400 font-medium">No notifications yet</p>
-      <p class="text-xs text-gray-300 mt-1">We'll notify you when something happens</p>
-    </div>`;
+    container.innerHTML = `<div class="text-center py-10"><div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-bell-slash text-xl text-gray-300"></i></div><p class="text-sm text-gray-400 font-medium">No notifications yet</p></div>`;
     if (toggleBtn) toggleBtn.classList.add("hidden");
     return;
   }
-
   if (toggleBtn) toggleBtn.classList.remove("hidden");
-
   const notificationsToShow = showingAllNotifications
     ? allNotifications
     : allNotifications.slice(0, 5);
   const hasMore = allNotifications.length > 5;
-
   if (toggleBtn) {
-    if (showingAllNotifications) {
+    if (showingAllNotifications)
       toggleBtn.innerHTML =
         '<i class="fa-solid fa-chevron-up mr-1"></i> Show Less';
-    } else if (hasMore) {
+    else if (hasMore)
       toggleBtn.innerHTML = `<i class="fa-solid fa-chevron-down mr-1"></i> See All (${allNotifications.length})`;
-    } else {
-      toggleBtn.classList.add("hidden");
-    }
+    else toggleBtn.classList.add("hidden");
   }
-
   if (dropdown) {
     dropdown.style.maxHeight = showingAllNotifications ? "85vh" : "60vh";
     container.style.maxHeight = showingAllNotifications ? "75vh" : "50vh";
@@ -1311,7 +1254,6 @@ function renderNotificationDropdown() {
   notificationsToShow.forEach((notif) => {
     let iconBg = "bg-blue-50 text-blue-600",
       icon = "fa-bell";
-
     switch (notif.type) {
       case "volunteer_approved":
         iconBg = "bg-emerald-50 text-emerald-600";
@@ -1334,95 +1276,46 @@ function renderNotificationDropdown() {
         icon = "fa-clock";
         break;
     }
-
     const isUnread = !notif.read;
     const timeDisplay = notif.createdAt
       ? formatRelativeTime(notif.createdAt)
       : "Just now";
-
-    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || "default"}')" 
-      class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"} border-b border-gray-100 last:border-b-0 group">
-      <div class="flex items-start space-x-3">
-        <div class="w-10 h-10 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform">
-          <i class="fa-solid ${icon} text-sm"></i>
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between gap-2">
-            <p class="text-sm font-semibold text-gray-800 truncate group-hover:text-tsu-blue transition-colors">${notif.title || "Notification"}</p>
-            ${isUnread ? '<div class="w-2.5 h-2.5 bg-blue-500 rounded-full shrink-0 animate-pulse"></div>' : ""}
-          </div>
-          <p class="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed">${notif.message || ""}</p>
-          <div class="flex items-center justify-between mt-2">
-            <p class="text-[10px] text-gray-400 flex items-center">
-              <i class="fa-solid fa-clock mr-1"></i>${timeDisplay}
-            </p>
-            <span class="text-[10px] text-tsu-blue font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-              Tap to view <i class="fa-solid fa-arrow-right ml-0.5 text-[9px]"></i>
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>`;
+    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || "default"}')" class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"} border-b border-gray-100 last:border-b-0 group"><div class="flex items-start space-x-3"><div class="w-10 h-10 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform"><i class="fa-solid ${icon} text-sm"></i></div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-2"><p class="text-sm font-semibold text-gray-800 truncate group-hover:text-tsu-blue transition-colors">${notif.title || "Notification"}</p>${isUnread ? '<div class="w-2.5 h-2.5 bg-blue-500 rounded-full shrink-0 animate-pulse"></div>' : ""}</div><p class="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed">${notif.message || ""}</p><div class="flex items-center justify-between mt-2"><p class="text-[10px] text-gray-400 flex items-center"><i class="fa-solid fa-clock mr-1"></i>${timeDisplay}</p><span class="text-[10px] text-tsu-blue font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center">Tap to view <i class="fa-solid fa-arrow-right ml-0.5 text-[9px]"></i></span></div></div></div></div>`;
   });
-
   container.innerHTML = html;
 }
-
 window.toggleMoreNotifications = function () {
   showingAllNotifications = !showingAllNotifications;
   renderNotificationDropdown();
 };
-
 window.toggleNotificationDropdown = function () {
   const dropdown = document.getElementById("notification-dropdown");
   const bellBtn = document.getElementById("notification-bell-btn");
   if (!dropdown || !bellBtn) return;
-
   if (dropdown.classList.contains("hidden")) {
     const rect = bellBtn.getBoundingClientRect();
     const dropdownWidth = 320;
     const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
 
-    let leftPosition = rect.right - dropdownWidth;
-
-    if (leftPosition < 10) {
-      leftPosition = 10;
-    }
-
-    if (leftPosition + dropdownWidth > viewportWidth - 10) {
+    // Position to the right side of the sidebar bell icon for larger screens
+    let leftPosition = rect.right + 15;
+    if (leftPosition + dropdownWidth > viewportWidth) {
+      // fallback if somehow too far right
       leftPosition = viewportWidth - dropdownWidth - 10;
     }
 
     let topPosition = rect.bottom + 8;
-
-    const dropdownHeight = 400;
-    if (topPosition + dropdownHeight > viewportHeight) {
-      topPosition = rect.top - dropdownHeight - 8;
-      if (topPosition < 10) {
-        topPosition = 10;
-      }
-    }
-
     dropdown.style.position = "fixed";
     dropdown.style.top = topPosition + "px";
     dropdown.style.left = leftPosition + "px";
     dropdown.style.right = "auto";
     dropdown.style.bottom = "auto";
-
-    if (viewportWidth < 640) {
-      dropdown.style.left = "50%";
-      dropdown.style.transform = "translateX(-50%)";
-      dropdown.style.width = Math.min(dropdownWidth, viewportWidth - 20) + "px";
-    } else {
-      dropdown.style.transform = "none";
-      dropdown.style.width = dropdownWidth + "px";
-    }
+    dropdown.style.transform = "none";
+    dropdown.style.width = dropdownWidth + "px";
 
     showingAllNotifications = false;
     renderNotificationDropdown();
     dropdown.classList.remove("hidden");
-
     setTimeout(() => {
       document.addEventListener("click", closeNotificationOnClickOutside);
     }, 100);
@@ -1430,7 +1323,6 @@ window.toggleNotificationDropdown = function () {
     closeNotificationDropdown();
   }
 };
-
 function closeNotificationDropdown() {
   const dropdown = document.getElementById("notification-dropdown");
   if (dropdown) {
@@ -1439,11 +1331,9 @@ function closeNotificationDropdown() {
   }
   document.removeEventListener("click", closeNotificationOnClickOutside);
 }
-
 function closeNotificationOnClickOutside(e) {
   const dropdown = document.getElementById("notification-dropdown");
   const bellBtn = document.getElementById("notification-bell-btn");
-
   if (
     dropdown &&
     !dropdown.classList.contains("hidden") &&
@@ -1454,11 +1344,10 @@ function closeNotificationOnClickOutside(e) {
     closeNotificationDropdown();
   }
 }
-
 window.handleNotificationClick = async function (notifId, type) {
   await window.markNotificationAsRead(notifId);
   closeNotificationDropdown();
-
+  closeMobileNotificationDropdown();
   switch (type) {
     case "volunteer_approved":
     case "volunteer_rejected":
@@ -1475,9 +1364,8 @@ window.handleNotificationClick = async function (notifId, type) {
       window.switchTab("notifications");
       break;
   }
-
   const notif = allNotifications.find((n) => n.id === notifId);
-  if (notif) {
+  if (notif)
     setTimeout(() => {
       window.showAlert(
         notif.title || "Notification",
@@ -1485,9 +1373,7 @@ window.handleNotificationClick = async function (notifId, type) {
         "success",
       );
     }, 500);
-  }
 };
-
 window.markNotificationAsRead = async function (notifId) {
   try {
     await updateDoc(doc(db, "notifications", notifId), { read: true });
@@ -1495,7 +1381,6 @@ window.markNotificationAsRead = async function (notifId) {
     console.error("Error marking notification as read:", e);
   }
 };
-
 window.markAllNotificationsAsRead = async function () {
   if (!loggedInUser?.id) return;
   window.showLoading();
@@ -1520,200 +1405,20 @@ window.markAllNotificationsAsRead = async function () {
   }
 };
 
-function showNotificationDetail(notif) {
-  const modal = document.getElementById("notification-detail-modal");
-  if (!modal) return;
-
-  const iconContainer = document.getElementById("notif-detail-icon");
-  const iconElement = document.getElementById("notif-detail-icon-inner");
-  let iconBg = "bg-blue-50 text-blue-600";
-  let iconClass = "fa-bell";
-
-  switch (notif.type) {
-    case "volunteer_approved":
-      iconBg = "bg-emerald-50 text-emerald-600";
-      iconClass = "fa-circle-check";
-      break;
-    case "volunteer_rejected":
-      iconBg = "bg-rose-50 text-rose-600";
-      iconClass = "fa-circle-xmark";
-      break;
-    case "donation_confirmed":
-      iconBg = "bg-emerald-50 text-emerald-600";
-      iconClass = "fa-circle-check";
-      break;
-    case "donation_rejected":
-      iconBg = "bg-rose-50 text-rose-600";
-      iconClass = "fa-circle-xmark";
-      break;
-    case "hours_credited":
-      iconBg = "bg-purple-50 text-purple-600";
-      iconClass = "fa-clock";
-      break;
-  }
-
-  if (iconContainer) {
-    iconContainer.className = `w-12 h-12 ${iconBg} rounded-full flex items-center justify-center shadow-md`;
-  }
-  if (iconElement) {
-    iconElement.className = `fa-solid ${iconClass} text-lg`;
-  }
-
-  const titleEl = document.getElementById("notif-detail-title");
-  if (titleEl) titleEl.textContent = notif.title || "Notification";
-
-  const timeEl = document.getElementById("notif-detail-time");
-  if (timeEl) {
-    const timeDisplay = notif.createdAt
-      ? formatFullDateTime(notif.createdAt)
-      : "Just now";
-    timeEl.innerHTML = `<i class="fa-solid fa-clock mr-1"></i>${timeDisplay}`;
-  }
-
-  const messageEl = document.getElementById("notif-detail-message");
-  if (messageEl)
-    messageEl.textContent = notif.message || "No additional details available.";
-
-  const badgeEl = document.getElementById("notif-detail-badge");
-  if (badgeEl) {
-    let badgeHtml = "";
-    let badgeClass = "";
-
-    switch (notif.type) {
-      case "volunteer_approved":
-        badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200";
-        badgeHtml =
-          '<i class="fa-solid fa-circle-check mr-1.5"></i> Volunteer Application Approved';
-        break;
-      case "volunteer_rejected":
-        badgeClass = "bg-red-100 text-red-800 border-red-200";
-        badgeHtml =
-          '<i class="fa-solid fa-circle-xmark mr-1.5"></i> Volunteer Application Rejected';
-        break;
-      case "donation_confirmed":
-        badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200";
-        badgeHtml =
-          '<i class="fa-solid fa-circle-check mr-1.5"></i> Donation Confirmed';
-        break;
-      case "donation_rejected":
-        badgeClass = "bg-red-100 text-red-800 border-red-200";
-        badgeHtml =
-          '<i class="fa-solid fa-circle-xmark mr-1.5"></i> Donation Rejected';
-        break;
-      case "hours_credited":
-        badgeClass = "bg-purple-100 text-purple-800 border-purple-200";
-        badgeHtml =
-          '<i class="fa-solid fa-clock mr-1.5"></i> Service Hours Credited';
-        break;
-      default:
-        badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
-        badgeHtml =
-          '<i class="fa-solid fa-bell mr-1.5"></i> General Notification';
-    }
-
-    badgeEl.innerHTML = `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold border ${badgeClass}">${badgeHtml}</span>`;
-  }
-
-  const actionsEl = document.getElementById("notif-detail-actions");
-  if (actionsEl) {
-    let actionsHtml = "";
-    let viewButtonText = "Go to Related Section";
-
-    switch (notif.type) {
-      case "volunteer_approved":
-      case "volunteer_rejected":
-        viewButtonText = "View Volunteer Status";
-        actionsHtml += `<button onclick="closeNotificationDetail(); setTimeout(() => window.switchTab('volunteers'), 300);" 
-          class="w-full bg-gradient-to-r from-tsu-blue to-tsu-blueLight text-white font-bold py-3 px-4 rounded-xl text-sm hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2">
-          <i class="fa-solid fa-hands-holding text-xs"></i>
-          <span>${viewButtonText}</span>
-          <i class="fa-solid fa-arrow-right text-xs"></i>
-        </button>`;
-        break;
-      case "donation_confirmed":
-      case "donation_rejected":
-        viewButtonText = "View Donation History";
-        actionsHtml += `<button onclick="closeNotificationDetail(); setTimeout(() => window.switchTab('donations'), 300);" 
-          class="w-full bg-gradient-to-r from-tsu-blue to-tsu-blueLight text-white font-bold py-3 px-4 rounded-xl text-sm hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2">
-          <i class="fa-solid fa-hand-holding-heart text-xs"></i>
-          <span>${viewButtonText}</span>
-          <i class="fa-solid fa-arrow-right text-xs"></i>
-        </button>`;
-        break;
-      case "hours_credited":
-        viewButtonText = "View Service Hours";
-        actionsHtml += `<button onclick="closeNotificationDetail(); setTimeout(() => window.switchTab('hours'), 300);" 
-          class="w-full bg-gradient-to-r from-tsu-blue to-tsu-blueLight text-white font-bold py-3 px-4 rounded-xl text-sm hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2">
-          <i class="fa-solid fa-clock text-xs"></i>
-          <span>${viewButtonText}</span>
-          <i class="fa-solid fa-arrow-right text-xs"></i>
-        </button>`;
-        break;
-      default:
-        viewButtonText = "View All Notifications";
-        actionsHtml += `<button onclick="closeNotificationDetail(); setTimeout(() => window.switchTab('notifications'), 300);" 
-          class="w-full bg-gradient-to-r from-tsu-blue to-tsu-blueLight text-white font-bold py-3 px-4 rounded-xl text-sm hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2">
-          <i class="fa-solid fa-bell text-xs"></i>
-          <span>${viewButtonText}</span>
-          <i class="fa-solid fa-arrow-right text-xs"></i>
-        </button>`;
-    }
-
-    actionsHtml += `<button onclick="closeNotificationDetail()" 
-      class="w-full bg-gray-100 text-gray-700 font-semibold py-2.5 px-4 rounded-xl text-sm hover:bg-gray-200 transition-all flex items-center justify-center space-x-2">
-      <i class="fa-solid fa-xmark text-xs"></i>
-      <span>Close</span>
-    </button>`;
-
-    actionsEl.innerHTML = actionsHtml;
-  }
-
-  modal.classList.remove("hidden");
-  document.body.style.overflow = "hidden";
-}
-
-window.closeNotificationDetail = function () {
-  const modal = document.getElementById("notification-detail-modal");
-  if (modal) {
-    modal.classList.add("hidden");
-    document.body.style.overflow = "";
-  }
-};
-
-window.updateNotifDetailReadStatus = function () {
-  notificationCount = Math.max(0, notificationCount - 1);
-  updateNotificationBadge();
-  renderNotificationDropdown();
-  window.showAlert(
-    "Marked as Read",
-    "Notification has been marked as read.",
-    "success",
-  );
-};
-
 let mobileShowingAllNotifications = false;
-
 window.toggleMobileNotificationDropdown = function () {
   const dropdown = document.getElementById("mobile-notification-dropdown");
   const bellBtn = document.getElementById("mobile-notification-bell-btn");
   const desktopDropdown = document.getElementById("notification-dropdown");
-
   if (!dropdown || !bellBtn) return;
-
   if (desktopDropdown && !desktopDropdown.classList.contains("hidden")) {
     desktopDropdown.classList.add("hidden");
     showingAllNotifications = false;
   }
-
   if (dropdown.classList.contains("hidden")) {
-    dropdown.style.top = "60px";
-    dropdown.style.left = "50%";
-    dropdown.style.transform = "translateX(-50%)";
-
     mobileShowingAllNotifications = false;
     renderMobileNotificationDropdown();
     dropdown.classList.remove("hidden");
-
     setTimeout(() => {
       document.addEventListener("click", closeMobileNotificationOnClickOutside);
     }, 100);
@@ -1721,7 +1426,6 @@ window.toggleMobileNotificationDropdown = function () {
     closeMobileNotificationDropdown();
   }
 };
-
 function closeMobileNotificationDropdown() {
   const dropdown = document.getElementById("mobile-notification-dropdown");
   if (dropdown) {
@@ -1730,11 +1434,9 @@ function closeMobileNotificationDropdown() {
   }
   document.removeEventListener("click", closeMobileNotificationOnClickOutside);
 }
-
 function closeMobileNotificationOnClickOutside(e) {
   const dropdown = document.getElementById("mobile-notification-dropdown");
   const bellBtn = document.getElementById("mobile-notification-bell-btn");
-
   if (
     dropdown &&
     !dropdown.classList.contains("hidden") &&
@@ -1745,19 +1447,14 @@ function closeMobileNotificationOnClickOutside(e) {
     closeMobileNotificationDropdown();
   }
 }
-
 function renderMobileNotificationDropdown() {
   const container = document.getElementById(
-    "mobile-notification-dropdown-list",
-  );
-  const unreadSpan = document.getElementById("mobile-dropdown-unread-count");
-  const toggleBtn = document.getElementById(
-    "mobile-notification-toggle-more-btn",
-  );
-  const dropdown = document.getElementById("mobile-notification-dropdown");
-
+      "mobile-notification-dropdown-list",
+    ),
+    unreadSpan = document.getElementById("mobile-dropdown-unread-count"),
+    toggleBtn = document.getElementById("mobile-notification-toggle-more-btn"),
+    dropdown = document.getElementById("mobile-notification-dropdown");
   if (!container) return;
-
   if (unreadSpan) {
     if (notificationCount > 0) {
       unreadSpan.textContent = `${notificationCount} new`;
@@ -1766,47 +1463,32 @@ function renderMobileNotificationDropdown() {
       unreadSpan.classList.add("hidden");
     }
   }
-
   if (allNotifications.length === 0) {
-    container.innerHTML = `<div class="text-center py-10">
-      <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-        <i class="fa-solid fa-bell-slash text-xl text-gray-300"></i>
-      </div>
-      <p class="text-sm text-gray-400 font-medium">No notifications yet</p>
-      <p class="text-xs text-gray-300 mt-1">We'll notify you when something happens</p>
-    </div>`;
+    container.innerHTML = `<div class="text-center py-10"><div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-bell-slash text-xl text-gray-300"></i></div><p class="text-sm text-gray-400 font-medium">No notifications yet</p></div>`;
     if (toggleBtn) toggleBtn.classList.add("hidden");
     return;
   }
-
   if (toggleBtn) toggleBtn.classList.remove("hidden");
-
   const notificationsToShow = mobileShowingAllNotifications
     ? allNotifications
     : allNotifications.slice(0, 5);
   const hasMore = allNotifications.length > 5;
-
   if (toggleBtn) {
-    if (mobileShowingAllNotifications) {
+    if (mobileShowingAllNotifications)
       toggleBtn.innerHTML =
         '<i class="fa-solid fa-chevron-up mr-1"></i> Show Less';
-    } else if (hasMore) {
+    else if (hasMore)
       toggleBtn.innerHTML = `<i class="fa-solid fa-chevron-down mr-1"></i> See All (${allNotifications.length})`;
-    } else {
-      toggleBtn.classList.add("hidden");
-    }
+    else toggleBtn.classList.add("hidden");
   }
-
   if (dropdown) {
     dropdown.style.maxHeight = mobileShowingAllNotifications ? "85vh" : "60vh";
     container.style.maxHeight = mobileShowingAllNotifications ? "75vh" : "50vh";
   }
-
   let html = "";
   notificationsToShow.forEach((notif) => {
     let iconBg = "bg-blue-50 text-blue-600",
       icon = "fa-bell";
-
     switch (notif.type) {
       case "volunteer_approved":
         iconBg = "bg-emerald-50 text-emerald-600";
@@ -1829,35 +1511,14 @@ function renderMobileNotificationDropdown() {
         icon = "fa-clock";
         break;
     }
-
     const isUnread = !notif.read;
     const timeDisplay = notif.createdAt
       ? formatRelativeTime(notif.createdAt)
       : "Just now";
-
-    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || "default"}'); closeMobileNotificationDropdown();" 
-      class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"} border-b border-gray-100 last:border-b-0">
-      <div class="flex items-start space-x-3">
-        <div class="w-9 h-9 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm">
-          <i class="fa-solid ${icon} text-xs"></i>
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center justify-between gap-2">
-            <p class="text-xs font-semibold text-gray-800 truncate">${notif.title || "Notification"}</p>
-            ${isUnread ? '<div class="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>' : ""}
-          </div>
-          <p class="text-[11px] text-gray-600 mt-0.5 line-clamp-2 leading-relaxed">${notif.message || ""}</p>
-          <p class="text-[9px] text-gray-400 mt-1.5 flex items-center">
-            <i class="fa-solid fa-clock mr-1"></i>${timeDisplay}
-          </p>
-        </div>
-      </div>
-    </div>`;
+    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || "default"}'); closeMobileNotificationDropdown();" class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"} border-b border-gray-100 last:border-b-0"><div class="flex items-start space-x-3"><div class="w-9 h-9 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm"><i class="fa-solid ${icon} text-xs"></i></div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-2"><p class="text-xs font-semibold text-gray-800 truncate">${notif.title || "Notification"}</p>${isUnread ? '<div class="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>' : ""}</div><p class="text-[11px] text-gray-600 mt-0.5 line-clamp-2 leading-relaxed">${notif.message || ""}</p><p class="text-[9px] text-gray-400 mt-1.5 flex items-center"><i class="fa-solid fa-clock mr-1"></i>${timeDisplay}</p></div></div></div>`;
   });
-
   container.innerHTML = html;
 }
-
 window.toggleMoreMobileNotifications = function () {
   mobileShowingAllNotifications = !mobileShowingAllNotifications;
   renderMobileNotificationDropdown();
@@ -1910,23 +1571,9 @@ function disableAllProfileFields() {
 function updateEditButtonText() {
   const ab = document.getElementById("profile-action-btn");
   if (!ab || !loggedInUser) return;
-  const now = new Date();
-  if (loggedInUser.lastProfileUpdate) {
-    const lu = loggedInUser.lastProfileUpdate.toDate
-      ? loggedInUser.lastProfileUpdate.toDate()
-      : new Date(loggedInUser.lastProfileUpdate);
-    const diff = (now.getTime() - lu.getTime()) / (1000 * 60 * 60 * 24);
-    if (diff < 30) {
-      const rd = Math.ceil(30 - diff);
-      ab.innerHTML = `<i class="fa-solid fa-clock text-[10px] mr-1"></i><span class="text-[10px]">Wait ${rd} day${rd > 1 ? "s" : ""}</span>`;
-      ab.classList.remove("btn-primary");
-      ab.classList.add("btn-secondary", "opacity-60", "cursor-not-allowed");
-      ab.setAttribute("data-mode", "waiting");
-      ab.setAttribute("onclick", "showEditRestrictionMessage()");
-      ab.disabled = true;
-      return;
-    }
-  }
+
+  // Note: Since edits are now un-restricted in terms of timing for the remaining mutable fields (Address, Phone, Password),
+  // we default straight back to "Edit Profile" without a cooldown check.
   ab.innerHTML =
     '<i class="fa-solid fa-pen-to-square text-[10px] mr-1"></i><span class="text-[10px]">Edit Profile</span>';
   ab.classList.remove("btn-primary", "opacity-60", "cursor-not-allowed");
@@ -1935,14 +1582,10 @@ function updateEditButtonText() {
   ab.setAttribute("onclick", "toggleEditMode()");
   ab.disabled = false;
 }
+
 function enableAllProfileFields() {
-  [
-    "prof-name",
-    "prof-phone",
-    "prof-address",
-    "prof-password",
-    "prof-age",
-  ].forEach((id) => {
+  // Only enable editable fields. Name and Age remain strictly locked.
+  ["prof-phone", "prof-address", "prof-password"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       el.disabled = false;
@@ -1970,45 +1613,14 @@ function enableAllProfileFields() {
   const fi = document.getElementById("profile-pic-input");
   if (fi) fi.disabled = false;
 }
-window.showEditRestrictionMessage = function () {
-  const now = new Date();
-  if (loggedInUser?.lastProfileUpdate) {
-    const lu = loggedInUser.lastProfileUpdate.toDate
-      ? loggedInUser.lastProfileUpdate.toDate()
-      : new Date(loggedInUser.lastProfileUpdate);
-    const diff = (now.getTime() - lu.getTime()) / (1000 * 60 * 60 * 24);
-    if (diff < 30)
-      window.showAlert(
-        "Cannot Edit",
-        `Wait ${Math.ceil(30 - diff)} more days.`,
-        "error",
-      );
-  }
-};
 
 // ===== TOGGLE EDIT MODE =====
 window.toggleEditMode = function () {
-  const nf = document.getElementById("prof-name"),
-    ab = document.getElementById("profile-action-btn");
-  if (!nf || !ab) return;
-  if (nf.disabled) {
+  const ab = document.getElementById("profile-action-btn");
+  if (!ab) return;
+  if (ab.getAttribute("data-mode") === "edit") {
     showLoading("Preparing edit mode...");
     setTimeout(() => {
-      const now = new Date();
-      if (loggedInUser?.lastProfileUpdate) {
-        const lu = loggedInUser.lastProfileUpdate.toDate
-          ? loggedInUser.lastProfileUpdate.toDate()
-          : new Date(loggedInUser.lastProfileUpdate);
-        if ((now.getTime() - lu.getTime()) / (1000 * 60 * 60 * 24) < 30) {
-          hideLoading();
-          window.showAlert(
-            "Cannot Edit",
-            `Wait ${Math.ceil(30 - (now.getTime() - lu.getTime()) / (1000 * 60 * 60 * 24))} more days.`,
-            "error",
-          );
-          return;
-        }
-      }
       enableAllProfileFields();
       ab.innerHTML =
         '<i class="fa-solid fa-floppy-disk text-[10px] mr-1"></i><span class="text-[10px]">Save Changes</span>';
@@ -2038,10 +1650,25 @@ window.cancelEdit = function () {
     if (fi) fi.value = "";
     if (loggedInUser) updateUIWithUserData(loggedInUser);
     disableAllProfileFields();
+
+    // Explicitly hide the cancel button and revert the edit button
+    const cb = document.getElementById("cancel-edit-btn");
+    if (cb) cb.classList.add("hidden");
+    const ab = document.getElementById("profile-action-btn");
+    if (ab) {
+      ab.innerHTML =
+        '<i class="fa-solid fa-pen-to-square text-[10px] mr-1"></i><span class="text-[10px]">Edit Profile</span>';
+      ab.classList.remove("btn-primary");
+      ab.classList.add("btn-secondary");
+      ab.setAttribute("data-mode", "edit");
+      ab.setAttribute("onclick", "toggleEditMode()");
+    }
+
     hideLoading();
     window.showAlert("Cancelled", "Changes discarded.", "success");
   }, 400);
 };
+
 window.saveProfileChanges = function () {
   showLoading("Saving...");
   setTimeout(() => {
@@ -2065,83 +1692,31 @@ if (profileForm) {
     const ab = document.getElementById("profile-action-btn");
     if (!ab || ab.getAttribute("data-mode") !== "save") return;
     if (isSaving || !loggedInUser?.id) return;
-    const name = document.getElementById("prof-name")?.value.trim() || "",
-      phone = document.getElementById("prof-phone")?.value.trim() || "";
-    const ageVal = document.getElementById("prof-age")?.value.trim() || "",
-      address = document.getElementById("prof-address")?.value.trim() || "";
-    const pi = document.getElementById("prof-password"),
-      password =
-        pi && pi.value.trim() !== "" ? pi.value.trim() : loggedInUser.password;
-    const hasAgeChange = parseInt(ageVal) !== parseInt(loggedInUser.age || 0);
-    const hasNonPwdChanges =
-      name !== (loggedInUser.name || "") ||
-      phone !== (loggedInUser.phone || "") ||
-      address !== (loggedInUser.address || "") ||
-      hasAgeChange;
-    const hasPwdChange = password !== (loggedInUser.password || ""),
-      hasInfoChanges = hasNonPwdChanges || hasPwdChange;
-    const hasPicChange = selectedProfilePicFile !== undefined,
-      isNewPic = selectedProfilePicFile instanceof File,
-      isRemoving = selectedProfilePicFile === null;
+
+    const phone = document.getElementById("prof-phone")?.value.trim() || "";
+    const address = document.getElementById("prof-address")?.value.trim() || "";
+    const pi = document.getElementById("prof-password");
+    const password = pi && pi.value.trim() !== "" ? pi.value.trim() : loggedInUser.password;
+
+    const hasNonPwdChanges = phone !== (loggedInUser.phone || "") || address !== (loggedInUser.address || "");
+    const hasPwdChange = password !== (loggedInUser.password || "");
+    const hasInfoChanges = hasNonPwdChanges || hasPwdChange;
+    const hasPicChange = selectedProfilePicFile !== undefined;
+    const isNewPic = selectedProfilePicFile instanceof File;
+    const isRemoving = selectedProfilePicFile === null;
+
     if (!hasInfoChanges && !hasPicChange) {
       window.showAlert("No Changes", "Nothing to save.", "error");
       return;
     }
+
     if (hasNonPwdChanges) {
-      if (!name) {
-        window.showAlert("Error", "Name required.", "error");
-        return;
-      }
-      if (!/^[a-zA-ZñÑ\s.]+$/.test(name)) {
-        window.showAlert("Error", "Invalid name.", "error");
-        return;
-      }
       if (phone && !/^09\d{9}$/.test(phone)) {
         window.showAlert("Error", "Invalid phone.", "error");
         return;
       }
-      if (hasAgeChange) {
-        const an = parseInt(ageVal);
-        if (!an || an < 15 || an > 120) {
-          window.showAlert("Error", "Age 15-120.", "error");
-          return;
-        }
-        const now = new Date();
-        if (loggedInUser.lastAgeUpdate) {
-          const lau = loggedInUser.lastAgeUpdate.toDate
-            ? loggedInUser.lastAgeUpdate.toDate()
-            : new Date(loggedInUser.lastAgeUpdate);
-          if ((now.getTime() - lau.getTime()) / (1000 * 60 * 60 * 24) < 365) {
-            window.showAlert(
-              "Cannot Change Age",
-              `Wait ${Math.ceil(365 - (now.getTime() - lau.getTime()) / (1000 * 60 * 60 * 24))} days.`,
-              "error",
-            );
-            return;
-          }
-        }
-      }
-      const hasOther =
-        name !== (loggedInUser.name || "") ||
-        phone !== (loggedInUser.phone || "") ||
-        address !== (loggedInUser.address || "");
-      if (hasOther) {
-        const now = new Date();
-        if (loggedInUser.lastProfileUpdate) {
-          const lu = loggedInUser.lastProfileUpdate.toDate
-            ? loggedInUser.lastProfileUpdate.toDate()
-            : new Date(loggedInUser.lastProfileUpdate);
-          if ((now.getTime() - lu.getTime()) / (1000 * 60 * 60 * 24) < 30) {
-            window.showAlert(
-              "Cannot Edit",
-              `Wait ${Math.ceil(30 - (now.getTime() - lu.getTime()) / (1000 * 60 * 60 * 24))} days.`,
-              "error",
-            );
-            return;
-          }
-        }
-      }
     }
+
     isSaving = true;
     showLoading("Saving...");
     if (ab) {
@@ -2170,20 +1745,12 @@ if (profileForm) {
         if (hasPwdChange && auth.currentUser)
           await updatePassword(auth.currentUser, password);
         if (hasNonPwdChanges) {
-          ud.name = name;
           ud.phone = phone;
           ud.address = address;
           ud.lastProfileUpdate = serverTimestamp();
-          su.name = name;
           su.phone = phone;
           su.address = address;
           su.lastProfileUpdate = now.toISOString();
-          if (hasAgeChange) {
-            ud.age = parseInt(ageVal) || 0;
-            ud.lastAgeUpdate = serverTimestamp();
-            su.age = parseInt(ageVal) || 0;
-            su.lastAgeUpdate = now.toISOString();
-          }
         }
         ud.password = password;
         su.password = password;
@@ -2194,17 +1761,21 @@ if (profileForm) {
         Object.assign(loggedInUser, su);
         saveUserSession(loggedInUser);
       }
+
       selectedProfilePicFile = undefined;
       updateUIWithUserData(loggedInUser);
       disableAllProfileFields();
       hideLoading();
+
       const cb = document.getElementById("cancel-edit-btn");
       if (cb) cb.classList.add("hidden");
       let msg = hasNonPwdChanges ? "Profile updated" : "";
       if (hasPwdChange) msg += (msg ? " & " : "") + "password changed";
       if (isNewPic) msg += (msg ? " & " : "") + "picture updated";
       if (isRemoving) msg += (msg ? " & " : "") + "picture removed";
+
       window.showAlert("Success!", msg + "! Fields locked.", "success");
+      document.getElementById('prof-password').type = 'password';
     } catch (error) {
       hideLoading();
       window.showAlert("Error", `Failed: ${error.message}`, "error");
@@ -2258,15 +1829,16 @@ onSnapshot(
   query(collection(db, "announcements"), orderBy("createdAt", "desc")),
   (snap) => {
     const container = document.getElementById("announcements-container");
-    const publicContainer = document.getElementById("public-announcements-container");
-    
+    const publicContainer = document.getElementById(
+      "public-announcements-container",
+    );
     if (snap.empty) {
-      const emptyHtml = '<div class="text-center py-16 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-bullhorn text-2xl text-gray-300"></i></div><p class="text-base text-gray-400">No announcements yet.</p><p class="text-xs text-gray-300 mt-1">Stay tuned for community updates</p></div>';
+      const emptyHtml =
+        '<div class="text-center py-16 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-bullhorn text-2xl text-gray-300"></i></div><p class="text-base text-gray-400">No announcements yet.</p></div>';
       if (container) container.innerHTML = emptyHtml;
       if (publicContainer) publicContainer.innerHTML = emptyHtml;
       return;
     }
-    
     let html = "";
     snap.forEach((d) => {
       const a = d.data(),
@@ -2296,15 +1868,14 @@ onSnapshot(
       const escDt = exactTime.replace(/'/g, "\\'");
       html += `<div onclick="openAnnouncementDetails('${annId}','${escT}','${escD}','${escP}','${escDt}')" class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"><div class="p-5 sm:p-6"><div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-gradient-to-br from-tsu-blue to-tsu-dark rounded-xl flex items-center justify-center shadow-sm shrink-0"><i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i></div><div class="min-w-0"><h4 class="font-bold text-sm text-gray-900">Municipality of Victoria</h4><div class="flex items-center space-x-2 mt-1"><span class="text-[11px] text-gray-400" title="${exactTime}"><i class="fa-solid fa-clock mr-1"></i>${relativeTime}</span><span class="text-[11px] px-2 py-0.5 rounded-full font-bold ${badgeClass}"><i class="fa-solid ${badgeIcon} mr-1 text-[10px]"></i>${a.priority || "Notice"}</span></div></div></div></div><h3 class="text-base sm:text-lg font-extrabold text-gray-900 group-hover:text-tsu-blue transition-colors line-clamp-2 leading-snug mb-2">${a.title || "Untitled"}</h3><p class="text-sm text-gray-500 mt-2 line-clamp-3 leading-relaxed">${a.desc || ""}</p>${a.createdBy ? `<p class="text-xs text-gray-400 mt-3 flex items-center"><i class="fa-solid fa-user-circle mr-1.5"></i>Posted by: <span class="font-semibold text-gray-500 ml-1">${a.createdBy}</span></p>` : ""}</div><div class="px-5 sm:px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between"><span class="text-xs text-tsu-blue font-semibold group-hover:underline">Read More <i class="fa-solid fa-arrow-right ml-1.5 text-[11px]"></i></span><span class="text-[11px] text-gray-400"><i class="fa-solid fa-eye mr-1"></i>Tap to view</span></div></div>`;
     });
-    
     if (container) container.innerHTML = html;
     if (publicContainer) publicContainer.innerHTML = html;
   },
 );
 window.openAnnouncementDetails = function (annId, title, desc, priority, date) {
   const mT = document.getElementById("modal-announcement-title"),
-    mD = document.getElementById("modal-announcement-desc");
-  const mDt = document.getElementById("modal-announcement-date"),
+    mD = document.getElementById("modal-announcement-desc"),
+    mDt = document.getElementById("modal-announcement-date"),
     mB = document.getElementById("modal-announcement-badge");
   if (mT) mT.textContent = title;
   if (mD) mD.textContent = desc || "No description.";
@@ -2352,9 +1923,12 @@ window.handleUnregisterClick = function (event, eventId, eventTitle) {
   window.unregisterFromEvent(eventId, eventTitle);
   return false;
 };
-
-window.promptLoginForEvent = function() {
-    window.showAlert("Authentication Required", "Please log in or create an account to join community events.", "error");
+window.promptLoginForEvent = function () {
+  window.showAlert(
+    "Authentication Required",
+    "Please log in or create an account to join community events.",
+    "error",
+  );
 };
 
 // ===== EVENTS RENDERER =====
@@ -2365,7 +1939,7 @@ function renderEvents() {
     (snap) => {
       if (snap.empty) {
         grid.innerHTML =
-          '<div class="col-span-full text-center py-16 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-calendar-xmark text-2xl text-gray-300"></i></div><p class="text-base text-gray-400">No upcoming events.</p></div>';
+          '<div class="col-span-full text-center py-16 bg-white rounded-xl border shadow-sm"><p class="text-base text-gray-400">No upcoming events.</p></div>';
         return;
       }
       let html = "";
@@ -2443,73 +2017,48 @@ function renderEvents() {
           actionBtn = `<button type="button" onclick="handleUnregisterClick(event, '${id}','${esc(ev.title)}')" class="text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all border border-red-200 w-full relative z-10"><i class="fa-solid fa-calendar-minus mr-1.5"></i>Cancel Registration</button>`;
         else
           actionBtn = `<button type="button" onclick="handleRegisterClick(event, '${id}','${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}')" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full relative z-10"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
-        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div>${ev.createdAt ? `<p class="text-[9px] text-gray-400 mt-2 flex items-center" title="${formatFullDateTime(ev.createdAt)}"><i class="fa-solid fa-clock mr-1"></i>Posted ${formatRelativeTime(ev.createdAt)}</p>` : ""}</div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
+        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div>${ev.createdAt ? `<p class="text-[9px] text-gray-400 mt-2 flex items-center"><i class="fa-solid fa-clock mr-1"></i>Posted ${formatRelativeTime(ev.createdAt)}</p>` : ""}</div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
       });
       grid.innerHTML = html;
     },
   );
 }
-
 function renderPublicEvents() {
   const publicGrid = document.getElementById("public-events-grid");
   if (!publicGrid) return;
-
-  getDocs(query(collection(db, "events"), orderBy("date", "asc"))).then((snap) => {
-    if (snap.empty) {
-      publicGrid.innerHTML = '<div class="col-span-full text-center py-10 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-calendar-xmark text-2xl text-gray-300"></i></div><p class="text-sm text-gray-400">No upcoming events.</p></div>';
-      return;
-    }
-    let html = "";
-    snap.forEach((d) => {
-      const ev = d.data(), id = d.id;
-      const esc = (t) => {
-        const div = document.createElement("div");
-        div.textContent = t || "";
-        return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-      };
-      
-      const dateDisplay = ev.date || "TBA", timeDisplay = ev.time ? formatTimeDisplay(ev.time) : "";
-      const hasImage = ev.imageUrl && ev.imageUrl !== "";
-      let typeIcon, placeholderGradient;
-      switch (ev.type) {
-        case "Seminar": typeIcon = "fa-chalkboard-user"; placeholderGradient = "from-[#800000] to-[#A52A2A]"; break;
-        case "Workshop": typeIcon = "fa-toolbox"; placeholderGradient = "from-[#A52A2A] to-[#8B0000]"; break;
-        case "Meeting": typeIcon = "fa-users"; placeholderGradient = "from-[#B8960C] to-[#8B6914]"; break;
-        case "Sports": typeIcon = "fa-futbol"; placeholderGradient = "from-[#0D3B5C] to-[#0A2947]"; break;
-        case "Health": typeIcon = "fa-heart-pulse"; placeholderGradient = "from-[#8B0000] to-[#600000]"; break;
-        case "Training": typeIcon = "fa-graduation-cap"; placeholderGradient = "from-[#1A5276] to-[#0A2947]"; break;
-        case "Celebration": typeIcon = "fa-cake-candles"; placeholderGradient = "from-[#FFD700] to-[#B8960C]"; break;
-        case "Outreach": typeIcon = "fa-hand-holding-heart"; placeholderGradient = "from-[#0A2947] to-[#1A5276]"; break;
-        case "Environmental": typeIcon = "fa-leaf"; placeholderGradient = "from-[#2B0000] to-[#0A2947]"; break;
-        case "Cultural": typeIcon = "fa-masks-theater"; placeholderGradient = "from-[#FFD700] to-[#CCAC00]"; break;
-        case "Fundraising": typeIcon = "fa-sack-dollar"; placeholderGradient = "from-[#A52A2A] to-[#800000]"; break;
-        default: typeIcon = "fa-calendar-check"; placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+  getDocs(query(collection(db, "events"), orderBy("date", "asc"))).then(
+    (snap) => {
+      if (snap.empty) {
+        publicGrid.innerHTML =
+          '<div class="col-span-full text-center py-10 bg-white rounded-xl border shadow-sm"><p class="text-sm text-gray-400">No upcoming events.</p></div>';
+        return;
       }
-
-      const imageSection = hasImage
-        ? `<div class="relative h-40 overflow-hidden"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
-        : `<div class="relative h-40 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden"><i class="fa-solid ${typeIcon} text-white/30 text-6xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
-      
-      const actionBtn = `<button type="button" onclick="promptLoginForEvent()" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full relative z-10"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
-      
-      html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div></div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
-    });
-    publicGrid.innerHTML = html;
-  });
+      let html = "";
+      snap.forEach((d) => {
+        const ev = d.data();
+        const esc = (t) => {
+          const div = document.createElement("div");
+          div.textContent = t || "";
+          return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        };
+        const dateDisplay = ev.date || "TBA",
+          timeDisplay = ev.time ? formatTimeDisplay(ev.time) : "";
+        const actionBtn = `<button type="button" onclick="promptLoginForEvent()" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full relative z-10"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
+        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group"><div class="relative h-40 bg-gradient-to-br from-[#0A2947] to-[#1A5276] flex items-center justify-center overflow-hidden"><i class="fa-solid fa-calendar-check text-white/30 text-6xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid fa-calendar-check text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div><div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div></div></div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
+      });
+      publicGrid.innerHTML = html;
+    },
+  );
 }
-
-// ===== MY EVENTS RENDERER =====
 function renderMyEvents() {
   const grid = document.getElementById("my-events-grid");
   if (!grid) return;
-  if (!loggedInUser) {
+  if (
+    !loggedInUser ||
+    (registeredEventIds.size === 0 && completedEventIds.size === 0)
+  ) {
     grid.innerHTML =
-      '<div class="col-span-full text-center py-16 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-lock text-2xl text-gray-300"></i></div><p class="text-base text-gray-400">Please login to see your events.</p></div>';
-    return;
-  }
-  if (registeredEventIds.size === 0 && completedEventIds.size === 0) {
-    grid.innerHTML =
-      '<div class="col-span-full text-center py-16 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-calendar-xmark text-2xl text-gray-300"></i></div><p class="text-base text-gray-400">No registered events.</p></div>';
+      '<div class="col-span-full text-center py-16 bg-white rounded-xl border shadow-sm"><p class="text-base text-gray-400">No registered events.</p></div>';
     return;
   }
   getDocs(query(collection(db, "events"), orderBy("date", "asc"))).then(
@@ -2527,7 +2076,14 @@ function renderMyEvents() {
           return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, "&quot;");
         };
         const isComp = completedEventIds.has(id);
-        const hasImage = ev.imageUrl && ev.imageUrl !== "";
+        const statusBadge = isComp
+          ? '<span class="inline-flex items-center space-x-1 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 pointer-events-none"><i class="fa-solid fa-circle-check text-[9px]"></i>Completed</span>'
+          : '<span class="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-none"><i class="fa-solid fa-clock text-[9px]"></i>Registered</span>';
+        const cancelBtn = !isComp
+          ? `<button type="button" onclick="handleUnregisterClick(event, '${id}','${esc(ev.title)}')" class="text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all border border-red-200 w-full mt-2 relative z-10"><i class="fa-solid fa-calendar-minus mr-1.5"></i>Cancel Registration</button>`
+          : "";
+        
+        // Get category icon and gradient
         let typeIcon, placeholderGradient;
         switch (ev.type) {
           case "Seminar":
@@ -2578,16 +2134,38 @@ function renderMyEvents() {
             typeIcon = "fa-calendar-check";
             placeholderGradient = "from-[#0A2947] to-[#1A5276]";
         }
+        
+        const hasImage = ev.imageUrl && ev.imageUrl !== "";
         const imageSection = hasImage
-          ? `<div class="relative h-32 overflow-hidden"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover pointer-events-none"><div class="absolute top-2 left-2"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[9px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
-          : `<div class="relative h-32 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden"><i class="fa-solid ${typeIcon} text-white/30 text-5xl pointer-events-none"></i><div class="absolute top-2 left-2"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[9px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
-        const statusBadge = isComp
-          ? '<span class="inline-flex items-center space-x-1 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 pointer-events-none"><i class="fa-solid fa-circle-check text-[9px]"></i>Completed</span>'
-          : '<span class="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-none"><i class="fa-solid fa-clock text-[9px]"></i>Registered</span>';
-        const cancelBtn = !isComp
-          ? `<button type="button" onclick="handleUnregisterClick(event, '${id}','${esc(ev.title)}')" class="text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all border border-red-200 w-full mt-2 relative z-10"><i class="fa-solid fa-calendar-minus mr-1.5"></i>Cancel Registration</button>`
-          : "";
-        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${ev.date || "TBA"}','${ev.time ? formatTimeDisplay(ev.time) : ""}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><div class="flex items-center justify-between mb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-1 leading-snug flex-1 mr-2">${ev.title || "Untitled Event"}</h3>${statusBadge}</div><div class="space-y-1.5"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${ev.date || "TBA"}</span>${ev.time ? `<span class="text-gray-400">| ${formatTimeDisplay(ev.time)}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div>${ev.createdAt ? `<p class="text-[9px] text-gray-400 mt-1 flex items-center" title="${formatFullDateTime(ev.createdAt)}"><i class="fa-solid fa-clock mr-1"></i>Posted ${formatRelativeTime(ev.createdAt)}</p>` : ""}</div></div>${cancelBtn ? `<div class="px-4 pb-4">${cancelBtn}</div>` : ""}</div>`;
+          ? `<div class="relative h-40 overflow-hidden rounded-t-xl"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
+          : `<div class="relative h-40 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden rounded-t-xl"><i class="fa-solid ${typeIcon} text-white/30 text-5xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
+        
+        const dateDisplay = ev.date || "TBA";
+        const timeDisplay = ev.time ? formatTimeDisplay(ev.time) : "";
+        
+        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col group">
+          <div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer">
+            ${imageSection}
+            <div class="p-4 pb-2">
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-bold text-gray-900 line-clamp-1 flex-1 mr-2 group-hover:text-[#800000] transition-colors">${ev.title || "Untitled Event"}</h3>
+                ${statusBadge}
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-center space-x-1.5 text-xs text-gray-500">
+                  <i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i>
+                  <span class="font-medium text-gray-700">${dateDisplay}</span>
+                  ${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}
+                </div>
+                <div class="flex items-center space-x-1.5 text-xs text-gray-500">
+                  <i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i>
+                  <span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          ${cancelBtn ? `<div class="px-4 pb-4 pt-1 border-t border-gray-100">${cancelBtn}</div>` : `<div class="px-4 pb-4 pt-2"></div>`}
+        </div>`;
       });
       grid.innerHTML = found
         ? html
@@ -2719,10 +2297,10 @@ eventsUnsubscribe = onSnapshot(
   () => {
     renderEvents();
     renderPublicEvents();
-  }
+  },
 );
 
-// ===== DONATIONS, HOURS, VOLUNTEERS - FIXED REAL-TIME LISTENERS =====
+// ===== DONATIONS, HOURS, VOLUNTEERS =====
 onSnapshot(
   query(collection(db, "donations"), orderBy("createdAt", "desc")),
   (snap) => {
@@ -2731,16 +2309,14 @@ onSnapshot(
     let html = "";
     snap.forEach((d) => {
       const data = d.data();
-      if (data.status === STATUS.APPROVED) {
+      if (data.status === STATUS.APPROVED)
         html += `<tr class="border-b"><td class="px-3 py-2 font-bold text-xs">${data.donorName || "Anonymous"}</td><td class="px-3 py-2 text-xs">${data.amount ? "₱" + parseFloat(data.amount).toLocaleString() : data.item || ""}</td><td class="px-3 py-2 text-xs">${data.purpose || ""}</td></tr>`;
-      }
     });
     tbody.innerHTML =
       html ||
       '<tr><td colspan="3" class="text-center py-4 text-xs text-gray-400">No confirmed donations yet.</td></tr>';
   },
 );
-
 onSnapshot(
   query(collection(db, "service_hours"), orderBy("hours", "desc")),
   (snap) => {
@@ -2762,7 +2338,6 @@ onSnapshot(
       '<tr><td colspan="3" class="text-center py-4 text-xs text-gray-400">No volunteers listed.</td></tr>';
   },
 );
-
 function initUserHourTracker() {
   if (!loggedInUser?.id) return;
   if (hoursUnsubscribe) hoursUnsubscribe();
@@ -2781,17 +2356,12 @@ function initUserHourTracker() {
         const data = d.data();
         if (data.status === STATUS.APPROVED)
           total += parseFloat(data.hours || 0);
-        let statusBadge = "";
-        if (data.status === STATUS.APPROVED) {
-          statusBadge =
-            '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800">✓ Approved</span>';
-        } else if (data.status === STATUS.REJECTED) {
-          statusBadge =
-            '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>';
-        } else {
-          statusBadge =
-            '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
-        }
+        let statusBadge =
+          data.status === STATUS.APPROVED
+            ? '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800">✓ Approved</span>'
+            : data.status === STATUS.REJECTED
+              ? '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>'
+              : '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
         html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.eventTitle || "Community Service"}</td><td class="px-3 py-2 text-xs font-bold">${data.hours || 0} hrs</td><td class="px-3 py-2">${statusBadge}</td></tr>`;
       });
       tbody.innerHTML =
@@ -2799,13 +2369,8 @@ function initUserHourTracker() {
         '<tr><td colspan="3" class="text-center py-4 text-xs text-gray-400">No hours recorded yet.</td></tr>';
       display.innerText = `${total} Hours`;
     },
-    (error) => {
-      console.error("Hours listener error:", error);
-    },
   );
 }
-
-// ===== VOLUNTEER FORM SUBMISSION =====
 document
   .getElementById("volunteer-form")
   ?.addEventListener("submit", async (e) => {
@@ -2814,10 +2379,10 @@ document
       window.showAlert("Error", "Please login first.", "error");
       return;
     }
-    const skills = document.getElementById("vol-skills")?.value || "";
-    const availability = document.getElementById("vol-avail")?.value || "";
-    const experience = document.getElementById("vol-experience")?.value || "";
-    const notes = document.getElementById("vol-notes")?.value.trim() || "";
+    const skills = document.getElementById("vol-skills")?.value || "",
+      availability = document.getElementById("vol-avail")?.value || "",
+      experience = document.getElementById("vol-experience")?.value || "",
+      notes = document.getElementById("vol-notes")?.value.trim() || "";
     if (!skills) {
       window.showAlert("Error", "Please select your primary skill.", "error");
       return;
@@ -2837,11 +2402,10 @@ document
     showLoading("Submitting application...");
     try {
       let verificationData = null;
-      if (selectedSkillVerificationFile) {
+      if (selectedSkillVerificationFile)
         verificationData = await convertFileToBase64(
           selectedSkillVerificationFile,
         );
-      }
       await addDoc(collection(db, "volunteers"), {
         residentId: loggedInUser.id,
         name: loggedInUser.name,
@@ -2872,23 +2436,21 @@ document
       );
     } catch (err) {
       hideLoading();
-      console.error("Volunteer submission error:", err);
       window.showAlert("Error", "Failed to submit application.", "error");
     }
   });
-
-// ===== SKILL VERIFICATION HANDLING =====
 window.handleSkillVerificationUpload = function (event) {
   const file = event.target.files[0];
   if (!file) return;
-  const allowedTypes = [
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ];
-  if (!allowedTypes.includes(file.type)) {
+  if (
+    ![
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ].includes(file.type)
+  ) {
     window.showAlert("Error", "Invalid file type.", "error");
     event.target.value = "";
     return;
@@ -2899,20 +2461,20 @@ window.handleSkillVerificationUpload = function (event) {
     return;
   }
   selectedSkillVerificationFile = file;
-  const placeholder = document.getElementById("skill-upload-placeholder");
-  const preview = document.getElementById("skill-upload-preview");
-  const fileName = document.getElementById("skill-file-name");
-  const fileSize = document.getElementById("skill-file-size");
+  const placeholder = document.getElementById("skill-upload-placeholder"),
+    preview = document.getElementById("skill-upload-preview"),
+    fileName = document.getElementById("skill-file-name"),
+    fileSize = document.getElementById("skill-file-size"),
+    dropzone = document.getElementById("skill-verification-dropzone");
   if (placeholder) placeholder.classList.add("hidden");
   if (preview) preview.classList.remove("hidden");
   if (fileName) fileName.textContent = file.name;
   if (fileSize) {
-    const sizeKB = (file.size / 1024).toFixed(1);
-    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    const sizeKB = (file.size / 1024).toFixed(1),
+      sizeMB = (file.size / (1024 * 1024)).toFixed(1);
     fileSize.textContent =
       file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
   }
-  const dropzone = document.getElementById("skill-verification-dropzone");
   if (dropzone) {
     dropzone.classList.add("border-emerald-500", "bg-emerald-50");
     dropzone.classList.remove("border-gray-300");
@@ -2920,11 +2482,11 @@ window.handleSkillVerificationUpload = function (event) {
 };
 window.removeSkillVerification = function () {
   selectedSkillVerificationFile = null;
-  const input = document.getElementById("skill-verification-input");
+  const input = document.getElementById("skill-verification-input"),
+    placeholder = document.getElementById("skill-upload-placeholder"),
+    preview = document.getElementById("skill-upload-preview"),
+    dropzone = document.getElementById("skill-verification-dropzone");
   if (input) input.value = "";
-  const placeholder = document.getElementById("skill-upload-placeholder");
-  const preview = document.getElementById("skill-upload-preview");
-  const dropzone = document.getElementById("skill-verification-dropzone");
   if (placeholder) placeholder.classList.remove("hidden");
   if (preview) preview.classList.add("hidden");
   if (dropzone) {
@@ -2940,7 +2502,6 @@ function convertFileToBase64(file) {
     reader.readAsDataURL(file);
   });
 }
-
 document
   .getElementById("donation-form")
   ?.addEventListener("submit", async (e) => {
@@ -2996,8 +2557,8 @@ window.switchTab = function (tabId) {
 };
 window.openEventDetails = function (title, date, time, location, desc) {
   const mT = document.getElementById("modal-event-title"),
-    mD = document.getElementById("modal-event-date");
-  const mL = document.getElementById("modal-event-location"),
+    mD = document.getElementById("modal-event-date"),
+    mL = document.getElementById("modal-event-location"),
     mDesc = document.getElementById("modal-event-desc");
   if (mT) mT.innerText = title;
   let dd = `Date: ${date || "TBA"}`;
@@ -3018,11 +2579,10 @@ document.addEventListener("DOMContentLoaded", () => {
   setupPhoneRestrictions();
   hideNotificationBell();
   const mobileOverlay = document.getElementById("mobile-overlay");
-  if (mobileOverlay) {
+  if (mobileOverlay)
     mobileOverlay.addEventListener("click", () => {
       window.toggleMobileMenu();
     });
-  }
   document.querySelectorAll(".nav-link").forEach((link) => {
     link.addEventListener("click", () => {
       const sidebar = document.getElementById("sidebar");
@@ -3030,14 +2590,13 @@ document.addEventListener("DOMContentLoaded", () => {
         sidebar &&
         sidebar.classList.contains("translate-x-0") &&
         window.innerWidth < 1024
-      ) {
+      )
         window.toggleMobileMenu();
-      }
     });
   });
   window.addEventListener("resize", () => {
-    const sidebar = document.getElementById("sidebar");
-    const overlay = document.getElementById("mobile-overlay");
+    const sidebar = document.getElementById("sidebar"),
+      overlay = document.getElementById("mobile-overlay");
     if (window.innerWidth >= 1024 && sidebar) {
       sidebar.classList.remove("translate-x-0");
       sidebar.classList.add("-translate-x-full");
@@ -3065,21 +2624,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (snap.exists()) {
           const userData = snap.data();
           const savedSession = localStorage.getItem("barangayUser");
-
           if (savedSession) {
             try {
               const parsedSession = JSON.parse(savedSession);
-              if (!currentSessionToken && userData.sessionToken) {
+              if (!currentSessionToken && userData.sessionToken)
                 currentSessionToken = userData.sessionToken;
-              }
-            } catch (e) {
-              console.error("Session parse error:", e);
-            }
+            } catch (e) {}
           }
-
           loggedInUser = { id: snap.id, ...userData };
           saveUserSession(loggedInUser);
-
           const se = sessionStorage.getItem("registeredEvents");
           if (se)
             try {
@@ -3099,9 +2652,7 @@ document.addEventListener("DOMContentLoaded", () => {
           showNotificationBell();
           updateUIWithUserData(loggedInUser);
           await setUserStatus(loggedInUser.id, true);
-
           startSessionHeartbeat(loggedInUser.id);
-
           initUserHourTracker();
           await loadUserRegisteredEvents();
           setupParticipantsListener();
@@ -3148,39 +2699,28 @@ window.addEventListener("beforeunload", () => {
   if (volunteersUnsubscribe) volunteersUnsubscribe();
   if (hoursUnsubscribe) hoursUnsubscribe();
 });
-
-// ===== ADDITIONAL: Close sidebar when clicking outside =====
 document.addEventListener("click", function (event) {
-  const sidebar = document.getElementById("sidebar");
-  const mobileMenuBtn = document.getElementById("mobile-menu-btn");
-  const isMobile = window.innerWidth < 1024;
-
+  const sidebar = document.getElementById("sidebar"),
+    mobileMenuBtn = document.getElementById("mobile-menu-btn"),
+    isMobile = window.innerWidth < 1024;
   if (!isMobile || !sidebar) return;
-
   const isOpen = sidebar.classList.contains("translate-x-0");
-
   if (isOpen) {
-    const clickedInsideSidebar = sidebar.contains(event.target);
-    const clickedMenuButton =
-      mobileMenuBtn && mobileMenuBtn.contains(event.target);
-
+    const clickedInsideSidebar = sidebar.contains(event.target),
+      clickedMenuButton = mobileMenuBtn && mobileMenuBtn.contains(event.target);
     if (!clickedInsideSidebar && !clickedMenuButton) {
       sidebar.classList.remove("translate-x-0");
       sidebar.classList.add("-translate-x-full");
-
       const overlay = document.getElementById("mobile-overlay");
       if (overlay) overlay.classList.add("hidden");
-
       document.body.style.overflow = "";
     }
   }
 });
-
 window.addEventListener("resize", function () {
   if (window.innerWidth >= 1024) {
-    const sidebar = document.getElementById("sidebar");
-    const overlay = document.getElementById("mobile-overlay");
-
+    const sidebar = document.getElementById("sidebar"),
+      overlay = document.getElementById("mobile-overlay");
     if (sidebar) {
       sidebar.classList.remove("-translate-x-full");
       sidebar.classList.add("translate-x-0");
@@ -3207,78 +2747,35 @@ window.triggerLogoutConfirmation = function () {
           isOnline: false,
           lastActive: serverTimestamp(),
         });
-      } catch (e) {
-        console.error("Clear session error:", e);
-      }
+      } catch (e) {}
     }
     await signOut(auth);
     clearUserSession();
     loggedInUser = null;
     currentSessionToken = null;
-    const loginForm = document.getElementById("login-form");
-    const registerForm = document.getElementById("register-form");
-    const loginEmail = document.getElementById("login-email");
-    const loginPassword = document.getElementById("login-password");
+    const loginForm = document.getElementById("login-form"),
+      registerForm = document.getElementById("register-form");
     if (loginForm) loginForm.reset();
-    if (loginEmail) loginEmail.value = "";
-    if (loginPassword) loginPassword.value = "";
     if (registerForm) registerForm.reset();
-    [
-      "reg-name",
-      "reg-email",
-      "reg-phone",
-      "reg-age",
-      "reg-gender",
-      "reg-address",
-      "reg-password",
-      "reg-confirm-password",
-    ].forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
-    });
-    const regGender = document.getElementById("reg-gender");
-    if (regGender) regGender.value = "";
-    const loginPanel = document.getElementById("login-panel");
-    const registerPanel = document.getElementById("register-panel");
-    if (loginPanel) loginPanel.classList.remove("hidden");
-    if (registerPanel) registerPanel.classList.add("hidden");
-    const authScreen = document.getElementById("auth-screen");
-    const dashboard = document.getElementById("dashboard");
-    if (authScreen) authScreen.classList.remove("hidden");
-    if (dashboard) dashboard.classList.add("hidden");
+    document.getElementById("login-panel")?.classList.remove("hidden");
+    document.getElementById("register-panel")?.classList.add("hidden");
+    document.getElementById("auth-screen")?.classList.remove("hidden");
+    document.getElementById("dashboard")?.classList.add("hidden");
     hideNotificationBell();
-    const sidebar = document.getElementById("sidebar");
-    const overlay = document.getElementById("mobile-overlay");
+    const sidebar = document.getElementById("sidebar"),
+      overlay = document.getElementById("mobile-overlay");
     if (sidebar && sidebar.classList.contains("translate-x-0")) {
       sidebar.classList.remove("translate-x-0");
       sidebar.classList.add("-translate-x-full");
       if (overlay) overlay.classList.add("hidden");
       document.body.style.overflow = "";
     }
-    if (alertTimeout) {
-      clearTimeout(alertTimeout);
-      alertTimeout = null;
-    }
-    if (participantsUnsubscribe) {
-      participantsUnsubscribe();
-      participantsUnsubscribe = null;
-    }
-    if (notificationsUnsubscribe) {
-      notificationsUnsubscribe();
-      notificationsUnsubscribe = null;
-    }
-    if (donationsUnsubscribe) {
-      donationsUnsubscribe();
-      donationsUnsubscribe = null;
-    }
-    if (volunteersUnsubscribe) {
-      volunteersUnsubscribe();
-      volunteersUnsubscribe = null;
-    }
-    if (hoursUnsubscribe) {
-      hoursUnsubscribe();
-      hoursUnsubscribe = null;
-    }
+    if (alertTimeout) clearTimeout(alertTimeout);
+    if (participantsUnsubscribe) participantsUnsubscribe();
+    if (notificationsUnsubscribe) notificationsUnsubscribe();
+    if (donationsUnsubscribe) donationsUnsubscribe();
+    if (volunteersUnsubscribe) volunteersUnsubscribe();
+    if (hoursUnsubscribe) hoursUnsubscribe();
     hideLoading();
     showLogoutBanner();
   });
@@ -3290,7 +2787,7 @@ function showLogoutBanner() {
   banner.id = "logout-banner";
   banner.className =
     "fixed top-0 left-0 right-0 z-[300] transform -translate-y-full transition-transform duration-500 ease-in-out";
-  banner.innerHTML = `<div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-4 shadow-2xl"><div class="max-w-4xl mx-auto flex items-center justify-between"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"><i class="fa-solid fa-circle-check text-white text-lg"></i></div><div><h3 class="font-extrabold text-sm">Successfully Logged Out</h3><p class="text-xs text-emerald-100 mt-0.5">You have been securely signed out of your account. Thank you for visiting OneVictoria!</p></div></div><button onclick="closeLogoutBanner()" class="text-white/80 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-sm"></i></button></div></div><div class="h-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 animate-pulse"></div>`;
+  banner.innerHTML = `<div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-4 shadow-2xl"><div class="max-w-4xl mx-auto flex items-center justify-between"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"><i class="fa-solid fa-circle-check text-white text-lg"></i></div><div><h3 class="font-extrabold text-sm">Successfully Logged Out</h3><p class="text-xs text-emerald-100 mt-0.5">You have been securely signed out of your account.</p></div></div><button onclick="closeLogoutBanner()" class="text-white/80 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-sm"></i></button></div></div>`;
   document.body.appendChild(banner);
   setTimeout(() => {
     banner.classList.remove("-translate-y-full");
@@ -3298,7 +2795,7 @@ function showLogoutBanner() {
   }, 100);
   setTimeout(() => {
     closeLogoutBanner();
-  }, 5000);
+  }, 7000);
 }
 window.closeLogoutBanner = function () {
   const banner = document.getElementById("logout-banner");
