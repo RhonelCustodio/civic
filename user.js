@@ -1571,9 +1571,6 @@ function disableAllProfileFields() {
 function updateEditButtonText() {
   const ab = document.getElementById("profile-action-btn");
   if (!ab || !loggedInUser) return;
-
-  // Note: Since edits are now un-restricted in terms of timing for the remaining mutable fields (Address, Phone, Password),
-  // we default straight back to "Edit Profile" without a cooldown check.
   ab.innerHTML =
     '<i class="fa-solid fa-pen-to-square text-[10px] mr-1"></i><span class="text-[10px]">Edit Profile</span>';
   ab.classList.remove("btn-primary", "opacity-60", "cursor-not-allowed");
@@ -2023,6 +2020,7 @@ function renderEvents() {
     },
   );
 }
+
 function renderPublicEvents() {
   const publicGrid = document.getElementById("public-events-grid");
   if (!publicGrid) return;
@@ -2044,7 +2042,29 @@ function renderPublicEvents() {
         const dateDisplay = ev.date || "TBA",
           timeDisplay = ev.time ? formatTimeDisplay(ev.time) : "";
         const actionBtn = `<button type="button" onclick="promptLoginForEvent()" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full relative z-10"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
-        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group"><div class="relative h-40 bg-gradient-to-br from-[#0A2947] to-[#1A5276] flex items-center justify-center overflow-hidden"><i class="fa-solid fa-calendar-check text-white/30 text-6xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid fa-calendar-check text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div><div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div></div></div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
+
+        let typeIcon, placeholderGradient;
+        switch (ev.type) {
+          case "Seminar": typeIcon = "fa-chalkboard-user"; placeholderGradient = "from-[#800000] to-[#A52A2A]"; break;
+          case "Workshop": typeIcon = "fa-toolbox"; placeholderGradient = "from-[#A52A2A] to-[#8B0000]"; break;
+          case "Meeting": typeIcon = "fa-users"; placeholderGradient = "from-[#B8960C] to-[#8B6914]"; break;
+          case "Sports": typeIcon = "fa-futbol"; placeholderGradient = "from-[#0D3B5C] to-[#0A2947]"; break;
+          case "Health": typeIcon = "fa-heart-pulse"; placeholderGradient = "from-[#8B0000] to-[#600000]"; break;
+          case "Training": typeIcon = "fa-graduation-cap"; placeholderGradient = "from-[#1A5276] to-[#0A2947]"; break;
+          case "Celebration": typeIcon = "fa-cake-candles"; placeholderGradient = "from-[#FFD700] to-[#B8960C]"; break;
+          case "Outreach": typeIcon = "fa-hand-holding-heart"; placeholderGradient = "from-[#0A2947] to-[#1A5276]"; break;
+          case "Environmental": typeIcon = "fa-leaf"; placeholderGradient = "from-[#2B0000] to-[#0A2947]"; break;
+          case "Cultural": typeIcon = "fa-masks-theater"; placeholderGradient = "from-[#FFD700] to-[#CCAC00]"; break;
+          case "Fundraising": typeIcon = "fa-sack-dollar"; placeholderGradient = "from-[#A52A2A] to-[#800000]"; break;
+          default: typeIcon = "fa-calendar-check"; placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+        }
+
+        const hasImage = ev.imageUrl && ev.imageUrl !== "";
+        const imageSection = hasImage
+          ? `<div class="relative h-40 overflow-hidden"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
+          : `<div class="relative h-40 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden"><i class="fa-solid ${typeIcon} text-white/30 text-5xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
+
+        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div></div></div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
       });
       publicGrid.innerHTML = html;
     },
@@ -2574,10 +2594,58 @@ window.toggleModal = function (modalId) {
   if (modal) modal.classList.toggle("hidden");
 };
 
+// ===== DYNAMIC MOBILE FIXES =====
+function applyMobileResponsiveFixes() {
+  // Fix 2: Adjust Profile section container width on mobile
+  const profileSection = document.getElementById('profile');
+  if (profileSection) {
+      profileSection.classList.remove('px-2');
+      profileSection.classList.add('px-4', 'w-full');
+  }
+
+  // Fix 3: Adjust sizing in Service Hours section for mobile
+  const hoursTab = document.getElementById('hours');
+  if (hoursTab) {
+      // Adjust padding of the top stats card
+      const hoursCard = hoursTab.querySelector('.card.p-8');
+      if (hoursCard) {
+          hoursCard.classList.remove('p-8');
+          hoursCard.classList.add('p-5', 'sm:p-8');
+      }
+      
+      // Adjust the total hours text size
+      const hoursDisplay = document.getElementById('total-hours-display');
+      if (hoursDisplay) {
+          hoursDisplay.classList.remove('text-3xl');
+          hoursDisplay.classList.add('text-2xl', 'sm:text-3xl');
+      }
+      
+      // Adjust the icon box size
+      const iconBox = hoursTab.querySelector('.w-16.h-16');
+      if (iconBox) {
+          iconBox.classList.remove('w-16', 'h-16');
+          iconBox.classList.add('w-12', 'h-12', 'sm:w-16', 'sm:h-16');
+          const icon = iconBox.querySelector('.text-3xl');
+          if (icon) {
+              icon.classList.remove('text-3xl');
+              icon.classList.add('text-2xl', 'sm:text-3xl');
+          }
+      }
+
+      // Adjust table headers for mobile view
+      const tableHeaders = hoursTab.querySelectorAll('th');
+      tableHeaders.forEach(th => {
+          th.classList.remove('px-5', 'py-3.5');
+          th.classList.add('px-3', 'py-2', 'sm:px-5', 'sm:py-3.5', 'text-[10px]', 'sm:text-xs');
+      });
+  }
+}
+
 // ===== INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", () => {
   setupPhoneRestrictions();
   hideNotificationBell();
+  applyMobileResponsiveFixes();
   const mobileOverlay = document.getElementById("mobile-overlay");
   if (mobileOverlay)
     mobileOverlay.addEventListener("click", () => {
