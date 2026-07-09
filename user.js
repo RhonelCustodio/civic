@@ -41,6 +41,13 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// ===== PAYMONGO CONFIGURATION =====
+const PAYMONGO_CONFIG = {
+  PUBLIC_KEY: "pk_test_pQCrR2WqLRBYuZh2BsCpSwAr",
+  SECRET_KEY: "sk_test_PeX2V85sQ9oRUytQeE4aacSU",
+  API_URL: "https://api.paymongo.com/v1",
+};
+
 // ===== STANDARDIZED STATUS CONSTANTS =====
 const STATUS = {
   APPROVED: "Approved",
@@ -138,12 +145,6 @@ function formatTimeDisplay(timeValue) {
   }
   return timeValue;
 }
-function formatEventDateTime(dateValue, timeValue) {
-  return (
-    (dateValue || "TBA") +
-    (timeValue ? ` | ${formatTimeDisplay(timeValue)}` : "")
-  );
-}
 
 // ===== MOBILE MENU TOGGLE =====
 window.toggleMobileMenu = function () {
@@ -165,28 +166,197 @@ window.toggleMobileMenu = function () {
   }
 };
 
-// ===== PAYMENT API CONFIGURATION =====
-const PAYMENT_API = {
-  gcash: {
-    merchantId: "GCASH_MERCHANT_ID",
-    apiKey: "GCASH_API_KEY",
-    endpoint: "https://api.gcash.com/v1/transactions",
-  },
-  paymaya: {
-    publicKey: "PAYMAYA_PUBLIC_KEY",
-    secretKey: "PAYMAYA_SECRET_KEY",
-    endpoint: "https://api.paymaya.com/v1/checkouts",
-  },
-  bank_transfer: {
-    bankName: "GCash",
-    accountNumber: "4413-6000-0859-3972",
-    accountName: "Municipality of Victoria",
-  },
-  cash: {
-    officeAddress: "Municipal Hall, Victoria, Tarlac",
-    officeHours: "8:00 AM - 5:00 PM, Monday to Friday",
-  },
-};
+// ===== PAYMONGO API FUNCTIONS =====
+
+/**
+ * Create a PayMongo Payment Intent
+ */
+async function createPayMongoPaymentIntent(amount, description, paymentMethod, billingDetails = {}) {
+  try {
+    const amountInCentavos = Math.round(amount * 100);
+
+    const paymentIntentData = {
+      data: {
+        attributes: {
+          amount: amountInCentavos,
+          currency: "PHP",
+          payment_method_allowed: [paymentMethod],
+          description: description || "Donation to Municipality of Victoria",
+          statement_descriptor: "Victoria LGU",
+          metadata: {
+            donor_name: billingDetails.name || "Anonymous",
+            purpose: description,
+          },
+        },
+      },
+    };
+
+    const response = await fetch(`${PAYMONGO_CONFIG.API_URL}/payment_intents`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+      },
+      body: JSON.stringify(paymentIntentData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.errors?.[0]?.detail || "Failed to create payment intent");
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error("PayMongo payment intent error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Create a payment method for GCash
+ */
+async function createGCashPaymentMethod(billingDetails = {}) {
+  try {
+    const paymentMethodData = {
+      data: {
+        attributes: {
+          type: "gcash",
+          billing: {
+            name: billingDetails.name || "Donor",
+            email: billingDetails.email || "",
+            phone: billingDetails.phone || "",
+          },
+        },
+      },
+    };
+
+    const response = await fetch(`${PAYMONGO_CONFIG.API_URL}/payment_methods`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+      },
+      body: JSON.stringify(paymentMethodData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.errors?.[0]?.detail || "Failed to create GCash payment method");
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error("GCash payment method error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Create a payment method for PayMaya
+ */
+async function createPayMayaPaymentMethod(billingDetails = {}) {
+  try {
+    const paymentMethodData = {
+      data: {
+        attributes: {
+          type: "paymaya",
+          billing: {
+            name: billingDetails.name || "Donor",
+            email: billingDetails.email || "",
+            phone: billingDetails.phone || "",
+          },
+        },
+      },
+    };
+
+    const response = await fetch(`${PAYMONGO_CONFIG.API_URL}/payment_methods`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+      },
+      body: JSON.stringify(paymentMethodData),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.errors?.[0]?.detail || "Failed to create PayMaya payment method");
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error("PayMaya payment method error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Attach payment method to payment intent
+ */
+async function attachPaymentMethodToIntent(paymentIntentId, paymentMethodId, returnUrl) {
+  try {
+    const response = await fetch(
+      `${PAYMONGO_CONFIG.API_URL}/payment_intents/${paymentIntentId}/attach`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+        },
+        body: JSON.stringify({
+          data: {
+            attributes: {
+              payment_method: paymentMethodId,
+              return_url: returnUrl || `${window.location.origin}/payment-success`,
+            },
+          },
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.errors?.[0]?.detail || "Failed to attach payment method");
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error("PayMongo attach payment method error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Check payment status
+ */
+async function checkPaymentStatus(paymentIntentId) {
+  try {
+    const response = await fetch(
+      `${PAYMONGO_CONFIG.API_URL}/payment_intents/${paymentIntentId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.errors?.[0]?.detail || "Failed to check payment status");
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error("Payment status check error:", error);
+    throw error;
+  }
+}
 
 // ===== PAYMENT PROCESSING =====
 window.selectPaymentMethod = function (method) {
@@ -210,14 +380,89 @@ window.setAmount = function (amount) {
   const inp = document.getElementById("donation-amount");
   if (inp) inp.value = amount;
 };
-function generateQRCode(method) {
+
+// ==========================================
+// UPDATED PAYMONGO QR GENERATION CODE START
+// ==========================================
+async function generateQRCode(method) {
   const ph = document.getElementById("qr-code-placeholder");
   if (!ph) return;
-  ph.innerHTML =
-    method === "gcash"
-      ? `<div class="text-center p-3"><i class="fa-solid fa-mobile-screen text-4xl text-blue-600 mb-2"></i><p class="text-[10px] font-bold">GCash QR</p><p class="text-[10px] text-gray-500">Scan to pay</p></div>`
-      : `<div class="text-center p-3"><i class="fa-solid fa-wallet text-4xl text-purple-600 mb-2"></i><p class="text-[10px] font-bold">PayMaya QR</p><p class="text-[10px] text-gray-500">Scan to pay</p></div>`;
+
+  // Kunin ang amount dynamically galing sa input field (default to 150 kung walang laman)
+  const amountInput = document.getElementById("donation-amount");
+  let amountInCentavos = 15000;
+  if (amountInput && amountInput.value) {
+    const parsedAmount = parseFloat(amountInput.value);
+    if (!isNaN(parsedAmount) && parsedAmount > 0) {
+      amountInCentavos = Math.round(parsedAmount * 100);
+    }
+  }
+
+  // 1. I-set ang loading state habang hinihintay ang sagot ng PayMongo
+  ph.innerHTML = `
+    <div class="text-center p-3">
+      <i class="fa-solid fa-spinner fa-spin text-2xl text-gray-400 mb-2"></i>
+      <p class="text-[10px] text-gray-500">Generating ${method.toUpperCase()} QR...</p>
+    </div>`;
+
+  try {
+    const response = {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        authorization: 'Basic 4oCi4oCi4oCi4oCiOuKAouKAouKAouKAog=='
+      },
+      body: JSON.stringify({
+        nation: 'ph',
+        mode: 'p2p',
+        type: 'dynamic',
+        transaction_currency: 'PHP',
+        expiry_seconds: 1800,
+        qr_image: false,
+        transaction_amount: 150000
+      })
+    };
+
+    fetch('https://api.paymongo.com/v3/qr/mpm/generate', response)
+      .then(res => res.json())
+      .then(res => console.log(res))
+      .catch(err => console.error(err));
+
+    if (!response.ok) throw new Error("PayMongo API Request Failed");
+
+    const data = await response.json();
+
+    // 3. Kunin ang image data mula sa tamang structure ng response (data.data.qr_image)
+    const qrImageString = data.data?.qr_image;
+
+    if (!qrImageString) throw new Error("No QR image found in response");
+
+    // 4. I-render ang <img> tag sa loob ng placeholder mo gamit ang Base64 string.
+    const methodColor = method === "gcash" ? "text-blue-600" : "text-purple-600";
+
+    ph.innerHTML = `
+      <div class="text-center p-3">
+        <img src="${qrImageString}" alt="${method} QR Code" class="mx-auto mb-2 border p-1 rounded shadow-sm w-32 h-32 object-contain bg-white" />
+        <p class="text-[10px] font-bold ${methodColor}">${method.toUpperCase()} QR</p>
+        <p class="text-[10px] text-gray-500">Scan to pay ₱${(amountInCentavos / 100).toFixed(2)}</p>
+      </div>
+    `;
+
+  } catch (error) {
+    console.error("Error generating QR:", error);
+    ph.innerHTML = `
+      <div class="text-center p-3">
+        <i class="fa-solid fa-triangle-exclamation text-2xl text-red-500 mb-2"></i>
+        <p class="text-[10px] font-bold text-red-500">Failed to generate QR</p>
+      </div>
+    `;
+  }
 }
+// ==========================================
+// UPDATED PAYMONGO QR GENERATION CODE END
+// ==========================================
+
 window.openPaymentModal = function (item, purpose) {
   if (!loggedInUser) {
     window.showAlert("Error", "Please login first.", "error");
@@ -228,6 +473,8 @@ window.openPaymentModal = function (item, purpose) {
     purpose: purpose || "General",
     donorName: loggedInUser.name || "Anonymous",
     donorId: loggedInUser.id || "",
+    donorEmail: loggedInUser.email || "",
+    donorPhone: loggedInUser.phone || "",
   };
   const pi = document.getElementById("payment-item");
   if (pi) pi.textContent = currentDonationData.item;
@@ -247,42 +494,38 @@ window.openPaymentModal = function (item, purpose) {
   if (da) da.value = "";
   window.toggleModal("payment-modal");
 };
-async function saveDonation(pr) {
+
+/**
+ * Save donation to Firestore
+ */
+async function saveDonation(donationData) {
   try {
-    if (!pr || !pr.transactionId) throw new Error("Invalid payment result");
-    if (!currentDonationData || !currentDonationData.donorId)
-      throw new Error("Donation data is missing");
-    const dd = {
-      donorName: currentDonationData.donorName || "Anonymous",
-      donorId: currentDonationData.donorId || "",
-      item: currentDonationData.item || "Donation",
-      purpose: currentDonationData.purpose || "General",
-      amount: pr.amount || 0,
-      paymentMethod: pr.method || "unknown",
-      transactionId: pr.transactionId,
-      paymentStatus: pr.status || STATUS.PENDING,
-      paymentTimestamp: pr.timestamp || new Date().toISOString(),
+    await addDoc(collection(db, "donations"), {
+      donorName: donationData.donorName || "Anonymous",
+      donorId: donationData.donorId || "",
+      donorEmail: donationData.donorEmail || "",
+      donorPhone: donationData.donorPhone || "",
+      item: donationData.item || "Donation",
+      purpose: donationData.purpose || "General",
+      amount: donationData.amount || 0,
+      paymentMethod: donationData.paymentMethod || "unknown",
+      transactionId: donationData.transactionId,
+      paymentIntentId: donationData.paymentIntentId || null,
+      paymentStatus: donationData.status || STATUS.PENDING,
+      paymentTimestamp: donationData.timestamp || new Date().toISOString(),
       status: STATUS.PENDING,
       createdAt: serverTimestamp(),
-    };
-    if (pr.bankDetails)
-      dd.bankDetails = {
-        bankName: pr.bankDetails.bankName || "",
-        accountNumber: pr.bankDetails.accountNumber || "",
-        accountName: pr.bankDetails.accountName || "",
-      };
-    if (pr.cashDetails)
-      dd.cashDetails = {
-        officeAddress: pr.cashDetails.officeAddress || "",
-        officeHours: pr.cashDetails.officeHours || "",
-      };
-    await addDoc(collection(db, "donations"), dd);
-    if (pr.status === STATUS.PENDING) showPaymentInstructions(pr);
+      metadata: donationData.metadata || {},
+    });
   } catch (e) {
     console.error("Save donation error:", e);
     throw new Error("Failed to save donation: " + e.message);
   }
 }
+
+/**
+ * Main payment processing function
+ */
 window.processPayment = async function () {
   const pm =
     selectedPaymentMethod ||
@@ -292,6 +535,7 @@ window.processPayment = async function () {
   );
   const donorName =
     document.getElementById("payment-donor-name")?.value?.trim() || "";
+
   if (!pm) {
     window.showAlert("Error", "Select a payment method.", "error");
     return;
@@ -308,104 +552,289 @@ window.processPayment = async function () {
     window.showAlert("Error", "Donation data missing.", "error");
     return;
   }
+
   currentDonationData.donorName = donorName;
   showLoading("Processing payment...");
+
   try {
-    let pr;
+    let result;
+
     switch (pm) {
       case "gcash":
-        pr = await processGCashPayment(amount);
+        result = await processGCashPayment(amount, currentDonationData);
         break;
       case "paymaya":
-        pr = await processPayMayaPayment(amount);
+        result = await processPayMayaPayment(amount, currentDonationData);
         break;
       case "bank_transfer":
-        pr = await processBankTransfer(amount);
+        result = await processBankTransfer(amount, currentDonationData);
         break;
       case "cash":
-        pr = await processCashPayment(amount);
+        result = await processCashPayment(amount, currentDonationData);
         break;
       default:
         throw new Error("Invalid payment method");
     }
-    await saveDonation(pr);
+
+    await saveDonation(result);
     window.toggleModal("payment-modal");
     document.getElementById("donation-form")?.reset();
     document.getElementById("payment-form")?.reset();
     currentDonationData = null;
     selectedPaymentMethod = null;
     hideLoading();
-    window.showAlert(
-      "Payment Successful!",
-      `Thank you for ₱${amount.toLocaleString()}! Your donation is pending confirmation.`,
-      "success",
-    );
+
+    if (result.status === STATUS.PENDING && (pm === "gcash" || pm === "paymaya")) {
+      window.showAlert(
+        "Payment Processing",
+        `Please complete the payment in the opened window. Amount: ₱${amount.toLocaleString()}`,
+        "success",
+      );
+    } else {
+      window.showAlert(
+        "Donation Submitted!",
+        `Thank you for your donation of ₱${amount.toLocaleString()}! Your donation is pending confirmation.`,
+        "success",
+      );
+    }
   } catch (e) {
     hideLoading();
     console.error("Payment processing error:", e);
     window.showAlert(
       "Payment Failed",
-      e.message || "An error occurred.",
+      e.message || "An error occurred during payment processing.",
       "error",
     );
   }
 };
-async function processGCashPayment(a) {
-  return {
-    transactionId: `GCASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    method: "gcash",
-    amount: a,
-    status: STATUS.PENDING,
-    timestamp: new Date().toISOString(),
-  };
-}
-async function processPayMayaPayment(a) {
-  return {
-    transactionId: `MAYA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    method: "paymaya",
-    amount: a,
-    status: STATUS.PENDING,
-    timestamp: new Date().toISOString(),
-  };
-}
-async function processBankTransfer(a) {
-  return {
-    transactionId: `BANK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    method: "bank_transfer",
-    amount: a,
-    status: STATUS.PENDING,
-    bankDetails: {
-      bankName: PAYMENT_API.bank_transfer.bankName,
-      accountNumber: PAYMENT_API.bank_transfer.accountNumber,
-      accountName: PAYMENT_API.bank_transfer.accountName,
-    },
-    timestamp: new Date().toISOString(),
-  };
-}
-async function processCashPayment(a) {
-  return {
-    transactionId: `CASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    method: "cash",
-    amount: a,
-    status: STATUS.PENDING,
-    cashDetails: {
-      officeAddress: PAYMENT_API.cash.officeAddress,
-      officeHours: PAYMENT_API.cash.officeHours,
-    },
-    timestamp: new Date().toISOString(),
-  };
-}
-function showPaymentInstructions(pr) {
-  let msg = "";
-  if (pr.method === "bank_transfer")
-    msg = `Transfer to:\nBank: ${pr.bankDetails.bankName}\nAccount: ${pr.bankDetails.accountNumber}\nName: ${pr.bankDetails.accountName}\nRef: ${pr.transactionId}`;
-  else if (pr.method === "cash")
-    msg = `Visit: ${pr.cashDetails.officeAddress}\nHours: ${pr.cashDetails.officeHours}\nRef: ${pr.transactionId}`;
-  if (msg)
-    setTimeout(
-      () => window.showAlert("Payment Instructions", msg, "success"),
-      1500,
+
+/**
+ * Process GCash payment via PayMongo
+ */
+async function processGCashPayment(amount, donationData) {
+  try {
+    const description = `Donation: ${donationData.purpose} - ${donationData.donorName}`;
+
+    // Create payment intent
+    const paymentIntent = await createPayMongoPaymentIntent(
+      amount,
+      description,
+      "gcash",
+      {
+        name: donationData.donorName,
+        email: donationData.donorEmail,
+        phone: donationData.donorPhone,
+      }
     );
+
+    // Create GCash payment method
+    const paymentMethod = await createGCashPaymentMethod({
+      name: donationData.donorName,
+      email: donationData.donorEmail,
+      phone: donationData.donorPhone,
+    });
+
+    // Attach payment method to intent
+    const result = await attachPaymentMethodToIntent(
+      paymentIntent.id,
+      paymentMethod.id,
+      `${window.location.origin}/payment-success`
+    );
+
+    // Check if redirect is needed
+    if (result.attributes?.next_action?.type === "redirect") {
+      const redirectUrl = result.attributes.next_action.redirect.url;
+      window.open(redirectUrl, "_blank");
+    }
+
+    return {
+      transactionId: paymentIntent.id,
+      paymentIntentId: paymentIntent.id,
+      method: "gcash",
+      amount: amount,
+      status: STATUS.PENDING,
+      timestamp: new Date().toISOString(),
+      donorName: donationData.donorName,
+      donorId: donationData.donorId,
+      donorEmail: donationData.donorEmail,
+      donorPhone: donationData.donorPhone,
+      item: donationData.item,
+      purpose: donationData.purpose,
+      paymentMethod: "gcash",
+      metadata: {
+        paymentIntentId: paymentIntent.id,
+        paymentMethodId: paymentMethod.id,
+      },
+    };
+  } catch (error) {
+    console.error("GCash payment error:", error);
+    // Fallback to manual processing if PayMongo fails
+    return {
+      transactionId: `GCASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      paymentIntentId: null,
+      method: "gcash",
+      amount: amount,
+      status: STATUS.PENDING,
+      timestamp: new Date().toISOString(),
+      donorName: donationData.donorName,
+      donorId: donationData.donorId,
+      donorEmail: donationData.donorEmail,
+      donorPhone: donationData.donorPhone,
+      item: donationData.item,
+      purpose: donationData.purpose,
+      paymentMethod: "gcash",
+      metadata: { fallback: true },
+    };
+  }
+}
+
+/**
+ * Process PayMaya payment via PayMongo
+ */
+async function processPayMayaPayment(amount, donationData) {
+  try {
+    const description = `Donation: ${donationData.purpose} - ${donationData.donorName}`;
+
+    const paymentIntent = await createPayMongoPaymentIntent(
+      amount,
+      description,
+      "paymaya",
+      {
+        name: donationData.donorName,
+        email: donationData.donorEmail,
+        phone: donationData.donorPhone,
+      }
+    );
+
+    const paymentMethod = await createPayMayaPaymentMethod({
+      name: donationData.donorName,
+      email: donationData.donorEmail,
+      phone: donationData.donorPhone,
+    });
+
+    const result = await attachPaymentMethodToIntent(
+      paymentIntent.id,
+      paymentMethod.id,
+      `${window.location.origin}/payment-success`
+    );
+
+    if (result.attributes?.next_action?.type === "redirect") {
+      const redirectUrl = result.attributes.next_action.redirect.url;
+      window.open(redirectUrl, "_blank");
+    }
+
+    return {
+      transactionId: paymentIntent.id,
+      paymentIntentId: paymentIntent.id,
+      method: "paymaya",
+      amount: amount,
+      status: STATUS.PENDING,
+      timestamp: new Date().toISOString(),
+      donorName: donationData.donorName,
+      donorId: donationData.donorId,
+      donorEmail: donationData.donorEmail,
+      donorPhone: donationData.donorPhone,
+      item: donationData.item,
+      purpose: donationData.purpose,
+      paymentMethod: "paymaya",
+      metadata: {
+        paymentIntentId: paymentIntent.id,
+        paymentMethodId: paymentMethod.id,
+      },
+    };
+  } catch (error) {
+    console.error("PayMaya payment error:", error);
+    return {
+      transactionId: `MAYA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      paymentIntentId: null,
+      method: "paymaya",
+      amount: amount,
+      status: STATUS.PENDING,
+      timestamp: new Date().toISOString(),
+      donorName: donationData.donorName,
+      donorId: donationData.donorId,
+      donorEmail: donationData.donorEmail,
+      donorPhone: donationData.donorPhone,
+      item: donationData.item,
+      purpose: donationData.purpose,
+      paymentMethod: "paymaya",
+      metadata: { fallback: true },
+    };
+  }
+}
+
+/**
+ * Process bank transfer payment
+ */
+async function processBankTransfer(amount, donationData) {
+  const reference = `BANK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Show bank details to user
+  setTimeout(() => {
+    window.showAlert(
+      "Bank Transfer Instructions",
+      `Please transfer ₱${amount.toFixed(2)} to:\n\nBank: Land Bank of the Philippines\nAccount: 1234-5678-9012\nAccount Name: Municipality of Victoria\nReference: ${reference}\n\nYour donation will be confirmed after verification.`,
+      "success",
+    );
+  }, 1500);
+
+  return {
+    transactionId: reference,
+    paymentIntentId: null,
+    method: "bank_transfer",
+    amount: amount,
+    status: STATUS.PENDING,
+    timestamp: new Date().toISOString(),
+    donorName: donationData.donorName,
+    donorId: donationData.donorId,
+    donorEmail: donationData.donorEmail,
+    donorPhone: donationData.donorPhone,
+    item: donationData.item,
+    purpose: donationData.purpose,
+    paymentMethod: "bank_transfer",
+    metadata: {
+      bankName: "Land Bank of the Philippines",
+      accountNumber: "1234-5678-9012",
+      accountName: "Municipality of Victoria",
+      reference: reference,
+    },
+  };
+}
+
+/**
+ * Process cash payment
+ */
+async function processCashPayment(amount, donationData) {
+  const reference = `CASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  setTimeout(() => {
+    window.showAlert(
+      "Cash Donation",
+      `Please visit the Municipal Treasurer's Office to complete your cash donation of ₱${amount.toFixed(2)}.\n\nAddress: Municipal Hall, Victoria, Tarlac\nHours: 8:00 AM - 5:00 PM, Monday to Friday\nReference: ${reference}`,
+      "success",
+    );
+  }, 1500);
+
+  return {
+    transactionId: reference,
+    paymentIntentId: null,
+    method: "cash",
+    amount: amount,
+    status: STATUS.PENDING,
+    timestamp: new Date().toISOString(),
+    donorName: donationData.donorName,
+    donorId: donationData.donorId,
+    donorEmail: donationData.donorEmail,
+    donorPhone: donationData.donorPhone,
+    item: donationData.item,
+    purpose: donationData.purpose,
+    paymentMethod: "cash",
+    metadata: {
+      officeAddress: "Municipal Hall, Victoria, Tarlac",
+      officeHours: "8:00 AM - 5:00 PM, Monday to Friday",
+      reference: reference,
+    },
+  };
 }
 
 // ===== SESSION MANAGEMENT =====
@@ -521,7 +950,7 @@ function saveUserSession(ud) {
         : ud.lastActive,
     };
     localStorage.setItem("barangayUser", JSON.stringify(sd));
-  } catch (e) {}
+  } catch (e) { }
 }
 function clearUserSession() {
   try {
@@ -529,12 +958,12 @@ function clearUserSession() {
     sessionStorage.removeItem("userActiveTab");
     sessionStorage.removeItem("registeredEvents");
     sessionStorage.removeItem("completedEvents");
-  } catch (e) {}
+  } catch (e) { }
 }
 function saveActiveTab(t) {
   try {
     sessionStorage.setItem("userActiveTab", t);
-  } catch (e) {}
+  } catch (e) { }
 }
 function getSavedActiveTab() {
   try {
@@ -1012,7 +1441,7 @@ document
 document.getElementById("login-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const email =
-      document.getElementById("login-email")?.value.trim().toLowerCase() || "",
+    document.getElementById("login-email")?.value.trim().toLowerCase() || "",
     pass = document.getElementById("login-password")?.value || "";
   if (!email || !pass) {
     window.showAlert("Error", "Enter email and password.", "error");
@@ -1297,10 +1726,8 @@ window.toggleNotificationDropdown = function () {
     const dropdownWidth = 320;
     const viewportWidth = window.innerWidth;
 
-    // Position to the right side of the sidebar bell icon for larger screens
     let leftPosition = rect.right + 15;
     if (leftPosition + dropdownWidth > viewportWidth) {
-      // fallback if somehow too far right
       leftPosition = viewportWidth - dropdownWidth - 10;
     }
 
@@ -1449,8 +1876,8 @@ function closeMobileNotificationOnClickOutside(e) {
 }
 function renderMobileNotificationDropdown() {
   const container = document.getElementById(
-      "mobile-notification-dropdown-list",
-    ),
+    "mobile-notification-dropdown-list",
+  ),
     unreadSpan = document.getElementById("mobile-dropdown-unread-count"),
     toggleBtn = document.getElementById("mobile-notification-toggle-more-btn"),
     dropdown = document.getElementById("mobile-notification-dropdown");
@@ -1581,7 +2008,6 @@ function updateEditButtonText() {
 }
 
 function enableAllProfileFields() {
-  // Only enable editable fields. Name and Age remain strictly locked.
   ["prof-phone", "prof-address", "prof-password"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
@@ -1648,7 +2074,6 @@ window.cancelEdit = function () {
     if (loggedInUser) updateUIWithUserData(loggedInUser);
     disableAllProfileFields();
 
-    // Explicitly hide the cancel button and revert the edit button
     const cb = document.getElementById("cancel-edit-btn");
     if (cb) cb.classList.add("hidden");
     const ab = document.getElementById("profile-action-btn");
@@ -1863,7 +2288,7 @@ onSnapshot(
         .replace(/\n/g, "\\n");
       const escP = (a.priority || "Notice").replace(/'/g, "\\'");
       const escDt = exactTime.replace(/'/g, "\\'");
-      html += `<div onclick="openAnnouncementDetails('${annId}','${escT}','${escD}','${escP}','${escDt}')" class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"><div class="p-5 sm:p-6"><div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-gradient-to-br from-tsu-blue to-tsu-dark rounded-xl flex items-center justify-center shadow-sm shrink-0"><i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i></div><div class="min-w-0"><h4 class="font-bold text-sm text-gray-900">Municipality of Victoria</h4><div class="flex items-center space-x-2 mt-1"><span class="text-[11px] text-gray-400" title="${exactTime}"><i class="fa-solid fa-clock mr-1"></i>${relativeTime}</span><span class="text-[11px] px-2 py-0.5 rounded-full font-bold ${badgeClass}"><i class="fa-solid ${badgeIcon} mr-1 text-[10px]"></i>${a.priority || "Notice"}</span></div></div></div></div><h3 class="text-base sm:text-lg font-extrabold text-gray-900 group-hover:text-tsu-blue transition-colors line-clamp-2 leading-snug mb-2">${a.title || "Untitled"}</h3><p class="text-sm text-gray-500 mt-2 line-clamp-3 leading-relaxed">${a.desc || ""}</p>${a.createdBy ? `<p class="text-xs text-gray-400 mt-3 flex items-center"><i class="fa-solid fa-user-circle mr-1.5"></i>Posted by: <span class="font-semibold text-gray-500 ml-1">${a.createdBy}</span></p>` : ""}</div><div class="px-5 sm:px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between"><span class="text-xs text-tsu-blue font-semibold group-hover:underline">Read More <i class="fa-solid fa-arrow-right ml-1.5 text-[11px]"></i></span><span class="text-[11px] text-gray-400"><i class="fa-solid fa-eye mr-1"></i>Tap to view</span></div></div>`;
+      html += `<div onclick="openAnnouncementDetails('${annId}','${escT}','${escD}','${escP}','${escDt}')" class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"><div class="p-5 sm:p-6"><div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-gradient-to-br from-tsu-blue to-tsu-dark rounded-xl flex items-center justify-center shadow-sm shrink-0"><i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i></div><div class="min-w-0"><h4 class="font-bold text-sm text-gray-900">Municipality of Victoria</h4><div class="flex items-center space-x-2 mt-1"><span class="text-[11px] text-gray-400" title="${exactTime}"><i class="fa-solid fa-clock mr-1"></i>${relativeTime}</span><span class="text-[11px] px-2 py-0.5 rounded-full font-bold ${badgeClass}"><i class="fa-solid ${badgeIcon} mr-1 text-[10px]"></i>${a.priority || "Notice"}</span></div></div></div></div><h3 class="text-base sm:text-lg font-extrabold text-gray-900 group-hover:text-tsu-blue transition-colors line-clamp-2 leading-snug mb-2">${a.title || "Untitled"}</h3><p class="text-sm text-gray-500 mt-2 line-clamp-3 leading-relaxed">${a.desc || ""}</p>${a.createdBy ? `<p class="text-xs text-gray-400 mt-3 flex items-center">` : ""}</div><div class="px-5 sm:px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between"><span class="text-[11px] text-gray-400"><i class="fa-solid fa-eye mr-1"></i>Tap to view</span></div></div>`;
     });
     if (container) container.innerHTML = html;
     if (publicContainer) publicContainer.innerHTML = html;
@@ -2102,67 +2527,31 @@ function renderMyEvents() {
         const cancelBtn = !isComp
           ? `<button type="button" onclick="handleUnregisterClick(event, '${id}','${esc(ev.title)}')" class="text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all border border-red-200 w-full mt-2 relative z-10"><i class="fa-solid fa-calendar-minus mr-1.5"></i>Cancel Registration</button>`
           : "";
-        
-        // Get category icon and gradient
+
         let typeIcon, placeholderGradient;
         switch (ev.type) {
-          case "Seminar":
-            typeIcon = "fa-chalkboard-user";
-            placeholderGradient = "from-[#800000] to-[#A52A2A]";
-            break;
-          case "Workshop":
-            typeIcon = "fa-toolbox";
-            placeholderGradient = "from-[#A52A2A] to-[#8B0000]";
-            break;
-          case "Meeting":
-            typeIcon = "fa-users";
-            placeholderGradient = "from-[#B8960C] to-[#8B6914]";
-            break;
-          case "Sports":
-            typeIcon = "fa-futbol";
-            placeholderGradient = "from-[#0D3B5C] to-[#0A2947]";
-            break;
-          case "Health":
-            typeIcon = "fa-heart-pulse";
-            placeholderGradient = "from-[#8B0000] to-[#600000]";
-            break;
-          case "Training":
-            typeIcon = "fa-graduation-cap";
-            placeholderGradient = "from-[#1A5276] to-[#0A2947]";
-            break;
-          case "Celebration":
-            typeIcon = "fa-cake-candles";
-            placeholderGradient = "from-[#FFD700] to-[#B8960C]";
-            break;
-          case "Outreach":
-            typeIcon = "fa-hand-holding-heart";
-            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
-            break;
-          case "Environmental":
-            typeIcon = "fa-leaf";
-            placeholderGradient = "from-[#2B0000] to-[#0A2947]";
-            break;
-          case "Cultural":
-            typeIcon = "fa-masks-theater";
-            placeholderGradient = "from-[#FFD700] to-[#CCAC00]";
-            break;
-          case "Fundraising":
-            typeIcon = "fa-sack-dollar";
-            placeholderGradient = "from-[#A52A2A] to-[#800000]";
-            break;
-          default:
-            typeIcon = "fa-calendar-check";
-            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+          case "Seminar": typeIcon = "fa-chalkboard-user"; placeholderGradient = "from-[#800000] to-[#A52A2A]"; break;
+          case "Workshop": typeIcon = "fa-toolbox"; placeholderGradient = "from-[#A52A2A] to-[#8B0000]"; break;
+          case "Meeting": typeIcon = "fa-users"; placeholderGradient = "from-[#B8960C] to-[#8B6914]"; break;
+          case "Sports": typeIcon = "fa-futbol"; placeholderGradient = "from-[#0D3B5C] to-[#0A2947]"; break;
+          case "Health": typeIcon = "fa-heart-pulse"; placeholderGradient = "from-[#8B0000] to-[#600000]"; break;
+          case "Training": typeIcon = "fa-graduation-cap"; placeholderGradient = "from-[#1A5276] to-[#0A2947]"; break;
+          case "Celebration": typeIcon = "fa-cake-candles"; placeholderGradient = "from-[#FFD700] to-[#B8960C]"; break;
+          case "Outreach": typeIcon = "fa-hand-holding-heart"; placeholderGradient = "from-[#0A2947] to-[#1A5276]"; break;
+          case "Environmental": typeIcon = "fa-leaf"; placeholderGradient = "from-[#2B0000] to-[#0A2947]"; break;
+          case "Cultural": typeIcon = "fa-masks-theater"; placeholderGradient = "from-[#FFD700] to-[#CCAC00]"; break;
+          case "Fundraising": typeIcon = "fa-sack-dollar"; placeholderGradient = "from-[#A52A2A] to-[#800000]"; break;
+          default: typeIcon = "fa-calendar-check"; placeholderGradient = "from-[#0A2947] to-[#1A5276]";
         }
-        
+
         const hasImage = ev.imageUrl && ev.imageUrl !== "";
         const imageSection = hasImage
           ? `<div class="relative h-40 overflow-hidden rounded-t-xl"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
           : `<div class="relative h-40 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden rounded-t-xl"><i class="fa-solid ${typeIcon} text-white/30 text-5xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
-        
+
         const dateDisplay = ev.date || "TBA";
         const timeDisplay = ev.time ? formatTimeDisplay(ev.time) : "";
-        
+
         html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col group">
           <div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer">
             ${imageSection}
@@ -2382,7 +2771,7 @@ function initUserHourTracker() {
             : data.status === STATUS.REJECTED
               ? '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>'
               : '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
-        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.eventTitle || "Community Service"}</td><td class="px-3 py-2 text-xs font-bold">${data.hours || 0} hrs</td><td class="px-3 py-2">${statusBadge}</td></tr>`;
+        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.eventTitle || "Community Service"}</td><td class="px-3 py-2 text-xs font-bold">${data.hours || 0} hrs</td><td class="px-10 py-2">${statusBadge}</td></tr>`;
       });
       tbody.innerHTML =
         html ||
@@ -2434,12 +2823,12 @@ document
         experience,
         verificationFile: verificationData
           ? {
-              fileName: selectedSkillVerificationFile.name,
-              fileType: selectedSkillVerificationFile.type,
-              fileSize: selectedSkillVerificationFile.size,
-              data: verificationData,
-              uploadedAt: new Date().toISOString(),
-            }
+            fileName: selectedSkillVerificationFile.name,
+            fileType: selectedSkillVerificationFile.type,
+            fileSize: selectedSkillVerificationFile.size,
+            data: verificationData,
+            uploadedAt: new Date().toISOString(),
+          }
           : null,
         notes,
         availability,
@@ -2594,58 +2983,55 @@ window.toggleModal = function (modalId) {
   if (modal) modal.classList.toggle("hidden");
 };
 
-// ===== DYNAMIC MOBILE FIXES =====
-function applyMobileResponsiveFixes() {
-  // Fix 2: Adjust Profile section container width on mobile
-  const profileSection = document.getElementById('profile');
-  if (profileSection) {
-      profileSection.classList.remove('px-2');
-      profileSection.classList.add('px-4', 'w-full');
+// ===== PRIVACY POLICY LOADING =====
+function handlePrivacyPolicyClick(event) {
+  event.preventDefault();
+  const overlay = document.getElementById('page-loading-overlay');
+  const href = event.currentTarget.getAttribute('href');
+  overlay.classList.add('active');
+  const minLoadTime = 2000;
+  const startTime = Date.now();
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.href = href;
+  document.head.appendChild(link);
+  function navigateToPrivacy() {
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, minLoadTime - elapsed);
+    setTimeout(() => { window.location.href = href; }, remaining);
   }
-
-  // Fix 3: Adjust sizing in Service Hours section for mobile
-  const hoursTab = document.getElementById('hours');
-  if (hoursTab) {
-      // Adjust padding of the top stats card
-      const hoursCard = hoursTab.querySelector('.card.p-8');
-      if (hoursCard) {
-          hoursCard.classList.remove('p-8');
-          hoursCard.classList.add('p-5', 'sm:p-8');
-      }
-      
-      // Adjust the total hours text size
-      const hoursDisplay = document.getElementById('total-hours-display');
-      if (hoursDisplay) {
-          hoursDisplay.classList.remove('text-3xl');
-          hoursDisplay.classList.add('text-2xl', 'sm:text-3xl');
-      }
-      
-      // Adjust the icon box size
-      const iconBox = hoursTab.querySelector('.w-16.h-16');
-      if (iconBox) {
-          iconBox.classList.remove('w-16', 'h-16');
-          iconBox.classList.add('w-12', 'h-12', 'sm:w-16', 'sm:h-16');
-          const icon = iconBox.querySelector('.text-3xl');
-          if (icon) {
-              icon.classList.remove('text-3xl');
-              icon.classList.add('text-2xl', 'sm:text-3xl');
-          }
-      }
-
-      // Adjust table headers for mobile view
-      const tableHeaders = hoursTab.querySelectorAll('th');
-      tableHeaders.forEach(th => {
-          th.classList.remove('px-5', 'py-3.5');
-          th.classList.add('px-3', 'py-2', 'sm:px-5', 'sm:py-3.5', 'text-[10px]', 'sm:text-xs');
-      });
-  }
+  navigateToPrivacy();
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+  const privacyLinks = document.querySelectorAll('a[href="privacy-policy.html"]');
+  privacyLinks.forEach(link => {
+    link.addEventListener('click', handlePrivacyPolicyClick);
+  });
+  document.addEventListener('click', function (e) {
+    const privacyLink = e.target.closest('a[href="privacy-policy.html"]');
+    if (privacyLink && !privacyLink.hasAttribute('data-listener-attached')) {
+      e.preventDefault();
+      privacyLink.setAttribute('data-listener-attached', 'true');
+      handlePrivacyPolicyClick(e);
+    }
+  });
+});
+
+window.addEventListener('pageshow', function (event) {
+  const overlay = document.getElementById('page-loading-overlay');
+  if (overlay && event.persisted) overlay.classList.remove('active');
+});
+
+window.addEventListener('load', function () {
+  const overlay = document.getElementById('page-loading-overlay');
+  if (overlay) setTimeout(() => { overlay.classList.remove('active'); }, 300);
+});
 
 // ===== INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", () => {
   setupPhoneRestrictions();
   hideNotificationBell();
-  applyMobileResponsiveFixes();
   const mobileOverlay = document.getElementById("mobile-overlay");
   if (mobileOverlay)
     mobileOverlay.addEventListener("click", () => {
@@ -2697,24 +3083,16 @@ document.addEventListener("DOMContentLoaded", () => {
               const parsedSession = JSON.parse(savedSession);
               if (!currentSessionToken && userData.sessionToken)
                 currentSessionToken = userData.sessionToken;
-            } catch (e) {}
+            } catch (e) { }
           }
           loggedInUser = { id: snap.id, ...userData };
           saveUserSession(loggedInUser);
           const se = sessionStorage.getItem("registeredEvents");
           if (se)
-            try {
-              registeredEventIds = new Set(JSON.parse(se));
-            } catch (e) {
-              registeredEventIds = new Set();
-            }
+            try { registeredEventIds = new Set(JSON.parse(se)); } catch (e) { registeredEventIds = new Set(); }
           const sc = sessionStorage.getItem("completedEvents");
           if (sc)
-            try {
-              completedEventIds = new Set(JSON.parse(sc));
-            } catch (e) {
-              completedEventIds = new Set();
-            }
+            try { completedEventIds = new Set(JSON.parse(sc)); } catch (e) { completedEventIds = new Set(); }
           document.getElementById("auth-screen")?.classList.add("hidden");
           document.getElementById("dashboard")?.classList.remove("hidden");
           showNotificationBell();
@@ -2734,9 +3112,7 @@ document.addEventListener("DOMContentLoaded", () => {
           await signOut(auth);
           hideLoading();
         }
-      } catch (e) {
-        hideLoading();
-      }
+      } catch (e) { hideLoading(); }
     } else {
       clearUserSession();
       loggedInUser = null;
@@ -2750,14 +3126,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 window.addEventListener("beforeunload", () => {
   if (loggedInUser?.id) {
-    sessionStorage.setItem(
-      "registeredEvents",
-      JSON.stringify([...registeredEventIds]),
-    );
-    sessionStorage.setItem(
-      "completedEvents",
-      JSON.stringify([...completedEventIds]),
-    );
+    sessionStorage.setItem("registeredEvents", JSON.stringify([...registeredEventIds]));
+    sessionStorage.setItem("completedEvents", JSON.stringify([...completedEventIds]));
     setUserStatus(loggedInUser.id, false);
   }
   stopSessionHeartbeat();
@@ -2793,9 +3163,7 @@ window.addEventListener("resize", function () {
       sidebar.classList.remove("-translate-x-full");
       sidebar.classList.add("translate-x-0");
     }
-    if (overlay) {
-      overlay.classList.add("hidden");
-    }
+    if (overlay) overlay.classList.add("hidden");
     document.body.style.overflow = "";
   }
 });
@@ -2815,7 +3183,7 @@ window.triggerLogoutConfirmation = function () {
           isOnline: false,
           lastActive: serverTimestamp(),
         });
-      } catch (e) {}
+      } catch (e) { }
     }
     await signOut(auth);
     clearUserSession();
@@ -2853,57 +3221,42 @@ function showLogoutBanner() {
   if (existingBanner) existingBanner.remove();
   const banner = document.createElement("div");
   banner.id = "logout-banner";
-  banner.className =
-    "fixed top-0 left-0 right-0 z-[300] transform -translate-y-full transition-transform duration-500 ease-in-out";
+  banner.className = "fixed top-0 left-0 right-0 z-[300] transform -translate-y-full transition-transform duration-500 ease-in-out";
   banner.innerHTML = `<div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-4 shadow-2xl"><div class="max-w-4xl mx-auto flex items-center justify-between"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"><i class="fa-solid fa-circle-check text-white text-lg"></i></div><div><h3 class="font-extrabold text-sm">Successfully Logged Out</h3><p class="text-xs text-emerald-100 mt-0.5">You have been securely signed out of your account.</p></div></div><button onclick="closeLogoutBanner()" class="text-white/80 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-sm"></i></button></div></div>`;
   document.body.appendChild(banner);
-  setTimeout(() => {
-    banner.classList.remove("-translate-y-full");
-    banner.classList.add("translate-y-0");
-  }, 100);
-  setTimeout(() => {
-    closeLogoutBanner();
-  }, 7000);
+  setTimeout(() => { banner.classList.remove("-translate-y-full"); banner.classList.add("translate-y-0"); }, 100);
+  setTimeout(() => { closeLogoutBanner(); }, 7000);
 }
 window.closeLogoutBanner = function () {
   const banner = document.getElementById("logout-banner");
   if (banner) {
     banner.classList.add("-translate-y-full");
     banner.classList.remove("translate-y-0");
-    setTimeout(() => {
-      banner.remove();
-    }, 500);
+    setTimeout(() => { banner.remove(); }, 500);
   }
 };
-document
-  .getElementById("payment-modal-close")
-  ?.addEventListener("click", function () {
+document.getElementById("payment-modal-close")?.addEventListener("click", function () {
+  currentDonationData = null;
+  selectedPaymentMethod = null;
+  document.getElementById("payment-form")?.reset();
+  document.querySelectorAll(".payment-method-btn").forEach((b) => b.classList.remove("selected"));
+  const qr = document.getElementById("qr-code-container");
+  if (qr) qr.classList.add("hidden");
+  window.toggleModal("payment-modal");
+});
+document.getElementById("payment-modal")?.addEventListener("click", function (e) {
+  if (e.target === this) {
     currentDonationData = null;
     selectedPaymentMethod = null;
     document.getElementById("payment-form")?.reset();
-    document
-      .querySelectorAll(".payment-method-btn")
-      .forEach((b) => b.classList.remove("selected"));
+    document.querySelectorAll(".payment-method-btn").forEach((b) => b.classList.remove("selected"));
+    this.classList.add("hidden");
     const qr = document.getElementById("qr-code-container");
     if (qr) qr.classList.add("hidden");
-    window.toggleModal("payment-modal");
-  });
-document
-  .getElementById("payment-modal")
-  ?.addEventListener("click", function (e) {
-    if (e.target === this) {
-      currentDonationData = null;
-      selectedPaymentMethod = null;
-      document.getElementById("payment-form")?.reset();
-      document
-        .querySelectorAll(".payment-method-btn")
-        .forEach((b) => b.classList.remove("selected"));
-      this.classList.add("hidden");
-      const qr = document.getElementById("qr-code-container");
-      if (qr) qr.classList.add("hidden");
-    }
-  });
+  }
+});
 
+// Global function exports
 window.joinEvent = window.confirmJoinEvent;
 window.confirmJoinEvent = window.confirmJoinEvent;
 window.performJoinEvent = performJoinEvent;
@@ -2913,15 +3266,12 @@ window.setAmount = window.setAmount;
 window.processPayment = window.processPayment;
 window.openPaymentModal = window.openPaymentModal;
 window.formatTimeDisplay = formatTimeDisplay;
-window.formatEventDateTime = formatEventDateTime;
 window.triggerProfilePicUpload = window.triggerProfilePicUpload;
 window.handleProfilePicChange = window.handleProfilePicChange;
 window.removeProfilePic = window.removeProfilePic;
 window.toggleEditMode = window.toggleEditMode;
 window.cancelEdit = window.cancelEdit;
 window.saveProfileChanges = window.saveProfileChanges;
-window.updateEditButtonText = window.updateEditButtonText;
-window.showEditRestrictionMessage = window.showEditRestrictionMessage;
 window.openAnnouncementDetails = window.openAnnouncementDetails;
 window.handleRegisterClick = window.handleRegisterClick;
 window.handleUnregisterClick = window.handleUnregisterClick;
@@ -2933,7 +3283,5 @@ window.toggleMoreNotifications = window.toggleMoreNotifications;
 window.markNotificationAsRead = window.markNotificationAsRead;
 window.markAllNotificationsAsRead = window.markAllNotificationsAsRead;
 window.handleNotificationClick = window.handleNotificationClick;
-window.closeNotificationDetail = window.closeNotificationDetail;
-window.updateNotifDetailReadStatus = window.updateNotifDetailReadStatus;
 window.toggleMobileNotificationDropdown = window.toggleMobileNotificationDropdown;
 window.toggleMoreMobileNotifications = window.toggleMoreMobileNotifications;
