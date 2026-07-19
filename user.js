@@ -82,6 +82,7 @@ let notificationCount = 0,
   showingAllNotifications = false;
 let sessionCheckInterval = null,
   currentSessionToken = null;
+let currentPaymentIntentId = null;
 
 // ===== DATE UTILITIES =====
 function formatShortDate(ts) {
@@ -171,9 +172,15 @@ window.toggleMobileMenu = function () {
 /**
  * Create a PayMongo Payment Intent
  */
-async function createPayMongoPaymentIntent(amount, description, paymentMethod, billingDetails = {}) {
+async function createPayMongoPaymentIntent(
+  amount,
+  description,
+  paymentMethod,
+  billingDetails = {},
+) {
   try {
     const amountInCentavos = Math.round(amount * 100);
+    const encodedKey = btoa(PAYMONGO_CONFIG.SECRET_KEY);
 
     const paymentIntentData = {
       data: {
@@ -195,7 +202,7 @@ async function createPayMongoPaymentIntent(amount, description, paymentMethod, b
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+        Authorization: `Basic ${encodedKey}`,
       },
       body: JSON.stringify(paymentIntentData),
     });
@@ -203,7 +210,9 @@ async function createPayMongoPaymentIntent(amount, description, paymentMethod, b
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.errors?.[0]?.detail || "Failed to create payment intent");
+      throw new Error(
+        data.errors?.[0]?.detail || "Failed to create payment intent",
+      );
     }
 
     return data.data;
@@ -218,14 +227,16 @@ async function createPayMongoPaymentIntent(amount, description, paymentMethod, b
  */
 async function createGCashPaymentMethod(billingDetails = {}) {
   try {
+    const encodedKey = btoa(PAYMONGO_CONFIG.PUBLIC_KEY);
+
     const paymentMethodData = {
       data: {
         attributes: {
           type: "gcash",
           billing: {
             name: billingDetails.name || "Donor",
-            email: billingDetails.email || "",
-            phone: billingDetails.phone || "",
+            email: billingDetails.email || "donor@example.com",
+            phone: billingDetails.phone || "09123456789",
           },
         },
       },
@@ -235,7 +246,7 @@ async function createGCashPaymentMethod(billingDetails = {}) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+        Authorization: `Basic ${encodedKey}`,
       },
       body: JSON.stringify(paymentMethodData),
     });
@@ -243,7 +254,9 @@ async function createGCashPaymentMethod(billingDetails = {}) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.errors?.[0]?.detail || "Failed to create GCash payment method");
+      throw new Error(
+        data.errors?.[0]?.detail || "Failed to create GCash payment method",
+      );
     }
 
     return data.data;
@@ -258,14 +271,16 @@ async function createGCashPaymentMethod(billingDetails = {}) {
  */
 async function createPayMayaPaymentMethod(billingDetails = {}) {
   try {
+    const encodedKey = btoa(PAYMONGO_CONFIG.PUBLIC_KEY);
+
     const paymentMethodData = {
       data: {
         attributes: {
           type: "paymaya",
           billing: {
             name: billingDetails.name || "Donor",
-            email: billingDetails.email || "",
-            phone: billingDetails.phone || "",
+            email: billingDetails.email || "donor@example.com",
+            phone: billingDetails.phone || "09123456789",
           },
         },
       },
@@ -275,7 +290,7 @@ async function createPayMayaPaymentMethod(billingDetails = {}) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+        Authorization: `Basic ${encodedKey}`,
       },
       body: JSON.stringify(paymentMethodData),
     });
@@ -283,7 +298,9 @@ async function createPayMayaPaymentMethod(billingDetails = {}) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.errors?.[0]?.detail || "Failed to create PayMaya payment method");
+      throw new Error(
+        data.errors?.[0]?.detail || "Failed to create PayMaya payment method",
+      );
     }
 
     return data.data;
@@ -296,31 +313,41 @@ async function createPayMayaPaymentMethod(billingDetails = {}) {
 /**
  * Attach payment method to payment intent
  */
-async function attachPaymentMethodToIntent(paymentIntentId, paymentMethodId, returnUrl) {
+async function attachPaymentMethodToIntent(
+  paymentIntentId,
+  paymentMethodId,
+  returnUrl,
+) {
   try {
+    const encodedKey = btoa(PAYMONGO_CONFIG.SECRET_KEY);
+
+    const attachData = {
+      data: {
+        attributes: {
+          payment_method: paymentMethodId,
+          return_url: returnUrl || `${window.location.origin}/payment-success`,
+        },
+      },
+    };
+
     const response = await fetch(
       `${PAYMONGO_CONFIG.API_URL}/payment_intents/${paymentIntentId}/attach`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+          Authorization: `Basic ${encodedKey}`,
         },
-        body: JSON.stringify({
-          data: {
-            attributes: {
-              payment_method: paymentMethodId,
-              return_url: returnUrl || `${window.location.origin}/payment-success`,
-            },
-          },
-        }),
-      }
+        body: JSON.stringify(attachData),
+      },
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.errors?.[0]?.detail || "Failed to attach payment method");
+      throw new Error(
+        data.errors?.[0]?.detail || "Failed to attach payment method",
+      );
     }
 
     return data.data;
@@ -335,26 +362,116 @@ async function attachPaymentMethodToIntent(paymentIntentId, paymentMethodId, ret
  */
 async function checkPaymentStatus(paymentIntentId) {
   try {
+    const encodedKey = btoa(PAYMONGO_CONFIG.SECRET_KEY);
+
     const response = await fetch(
       `${PAYMONGO_CONFIG.API_URL}/payment_intents/${paymentIntentId}`,
       {
         method: "GET",
         headers: {
-          Authorization: `Basic ${btoa(PAYMONGO_CONFIG.SECRET_KEY + ":")}`,
+          Authorization: `Basic ${encodedKey}`,
         },
-      }
+      },
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.errors?.[0]?.detail || "Failed to check payment status");
+      throw new Error(
+        data.errors?.[0]?.detail || "Failed to check payment status",
+      );
     }
 
     return data.data;
   } catch (error) {
     console.error("Payment status check error:", error);
     throw error;
+  }
+}
+
+// ===== QR CODE GENERATION =====
+async function generateQRCode(method) {
+  const ph = document.getElementById("qr-code-placeholder");
+  if (!ph) return;
+
+  const amountInput = document.getElementById("donation-amount");
+  let amountInCentavos = 15000;
+  if (amountInput && amountInput.value) {
+    const parsedAmount = parseFloat(amountInput.value);
+    if (!isNaN(parsedAmount) && parsedAmount > 0) {
+      amountInCentavos = Math.round(parsedAmount * 100);
+    }
+  }
+
+  ph.innerHTML = `
+    <div class="text-center p-3">
+      <i class="fa-solid fa-spinner fa-spin text-2xl text-gray-400 mb-2"></i>
+      <p class="text-[10px] text-gray-500">Generating ${method.toUpperCase()} QR...</p>
+    </div>`;
+
+  try {
+    const paymentIntent = await createPayMongoPaymentIntent(
+      amountInCentavos / 100,
+      `Donation via ${method.toUpperCase()}`,
+      method,
+      {
+        name: currentDonationData?.donorName || "Donor",
+        email: currentDonationData?.donorEmail || "",
+        phone: currentDonationData?.donorPhone || "",
+      },
+    );
+
+    let paymentMethod;
+    if (method === "gcash") {
+      paymentMethod = await createGCashPaymentMethod({
+        name: currentDonationData?.donorName || "Donor",
+        email: currentDonationData?.donorEmail || "",
+        phone: currentDonationData?.donorPhone || "",
+      });
+    } else if (method === "paymaya") {
+      paymentMethod = await createPayMayaPaymentMethod({
+        name: currentDonationData?.donorName || "Donor",
+        email: currentDonationData?.donorEmail || "",
+        phone: currentDonationData?.donorPhone || "",
+      });
+    }
+
+    if (paymentMethod) {
+      const attachedIntent = await attachPaymentMethodToIntent(
+        paymentIntent.id,
+        paymentMethod.id,
+        `${window.location.origin}/payment-success`,
+      );
+
+      if (attachedIntent.attributes?.next_action?.type === "redirect") {
+        const redirectUrl = attachedIntent.attributes.next_action.redirect.url;
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(redirectUrl)}`;
+        const methodColor =
+          method === "gcash" ? "text-blue-600" : "text-purple-600";
+
+        ph.innerHTML = `
+          <div class="text-center p-3">
+            <img src="${qrCodeUrl}" alt="${method} QR Code" class="mx-auto mb-2 border p-1 rounded shadow-sm w-32 h-32 object-contain bg-white" />
+            <p class="text-[10px] font-bold ${methodColor}">${method.toUpperCase()} QR</p>
+            <p class="text-[10px] text-gray-500">Scan to pay ₱${(amountInCentavos / 100).toFixed(2)}</p>
+            <button onclick="window.open('${redirectUrl}', '_blank')" class="mt-2 text-[10px] text-blue-600 underline hover:text-blue-800">
+              Or click here to pay
+            </button>
+          </div>
+        `;
+
+        currentPaymentIntentId = paymentIntent.id;
+      }
+    }
+  } catch (error) {
+    console.error("Error generating QR:", error);
+    ph.innerHTML = `
+      <div class="text-center p-3">
+        <i class="fa-solid fa-triangle-exclamation text-2xl text-red-500 mb-2"></i>
+        <p class="text-[10px] font-bold text-red-500">Failed to generate QR</p>
+        <p class="text-[8px] text-gray-500 mt-1">Please try again or use another payment method</p>
+      </div>
+    `;
   }
 }
 
@@ -376,92 +493,17 @@ window.selectPaymentMethod = function (method) {
     if (qr) qr.classList.add("hidden");
   }
 };
+
 window.setAmount = function (amount) {
   const inp = document.getElementById("donation-amount");
   if (inp) inp.value = amount;
+  if (
+    selectedPaymentMethod === "gcash" ||
+    selectedPaymentMethod === "paymaya"
+  ) {
+    generateQRCode(selectedPaymentMethod);
+  }
 };
-
-// ==========================================
-// UPDATED PAYMONGO QR GENERATION CODE START
-// ==========================================
-async function generateQRCode(method) {
-  const ph = document.getElementById("qr-code-placeholder");
-  if (!ph) return;
-
-  // Kunin ang amount dynamically galing sa input field (default to 150 kung walang laman)
-  const amountInput = document.getElementById("donation-amount");
-  let amountInCentavos = 15000;
-  if (amountInput && amountInput.value) {
-    const parsedAmount = parseFloat(amountInput.value);
-    if (!isNaN(parsedAmount) && parsedAmount > 0) {
-      amountInCentavos = Math.round(parsedAmount * 100);
-    }
-  }
-
-  // 1. I-set ang loading state habang hinihintay ang sagot ng PayMongo
-  ph.innerHTML = `
-    <div class="text-center p-3">
-      <i class="fa-solid fa-spinner fa-spin text-2xl text-gray-400 mb-2"></i>
-      <p class="text-[10px] text-gray-500">Generating ${method.toUpperCase()} QR...</p>
-    </div>`;
-
-  try {
-    const response = {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        authorization: 'Basic 4oCi4oCi4oCi4oCiOuKAouKAouKAouKAog=='
-      },
-      body: JSON.stringify({
-        nation: 'ph',
-        mode: 'p2p',
-        type: 'dynamic',
-        transaction_currency: 'PHP',
-        expiry_seconds: 1800,
-        qr_image: false,
-        transaction_amount: 150000
-      })
-    };
-
-    fetch('https://api.paymongo.com/v3/qr/mpm/generate', response)
-      .then(res => res.json())
-      .then(res => console.log(res))
-      .catch(err => console.error(err));
-
-    if (!response.ok) throw new Error("PayMongo API Request Failed");
-
-    const data = await response.json();
-
-    // 3. Kunin ang image data mula sa tamang structure ng response (data.data.qr_image)
-    const qrImageString = data.data?.qr_image;
-
-    if (!qrImageString) throw new Error("No QR image found in response");
-
-    // 4. I-render ang <img> tag sa loob ng placeholder mo gamit ang Base64 string.
-    const methodColor = method === "gcash" ? "text-blue-600" : "text-purple-600";
-
-    ph.innerHTML = `
-      <div class="text-center p-3">
-        <img src="${qrImageString}" alt="${method} QR Code" class="mx-auto mb-2 border p-1 rounded shadow-sm w-32 h-32 object-contain bg-white" />
-        <p class="text-[10px] font-bold ${methodColor}">${method.toUpperCase()} QR</p>
-        <p class="text-[10px] text-gray-500">Scan to pay ₱${(amountInCentavos / 100).toFixed(2)}</p>
-      </div>
-    `;
-
-  } catch (error) {
-    console.error("Error generating QR:", error);
-    ph.innerHTML = `
-      <div class="text-center p-3">
-        <i class="fa-solid fa-triangle-exclamation text-2xl text-red-500 mb-2"></i>
-        <p class="text-[10px] font-bold text-red-500">Failed to generate QR</p>
-      </div>
-    `;
-  }
-}
-// ==========================================
-// UPDATED PAYMONGO QR GENERATION CODE END
-// ==========================================
 
 window.openPaymentModal = function (item, purpose) {
   if (!loggedInUser) {
@@ -483,6 +525,7 @@ window.openPaymentModal = function (item, purpose) {
   const pdn = document.getElementById("payment-donor-name");
   if (pdn) pdn.value = currentDonationData.donorName;
   selectedPaymentMethod = null;
+  currentPaymentIntentId = null;
   const spm = document.getElementById("selected-payment-method");
   if (spm) spm.value = "";
   document
@@ -582,9 +625,13 @@ window.processPayment = async function () {
     document.getElementById("payment-form")?.reset();
     currentDonationData = null;
     selectedPaymentMethod = null;
+    currentPaymentIntentId = null;
     hideLoading();
 
-    if (result.status === STATUS.PENDING && (pm === "gcash" || pm === "paymaya")) {
+    if (
+      result.status === STATUS.PENDING &&
+      (pm === "gcash" || pm === "paymaya")
+    ) {
       window.showAlert(
         "Payment Processing",
         `Please complete the payment in the opened window. Amount: ₱${amount.toLocaleString()}`,
@@ -615,7 +662,6 @@ async function processGCashPayment(amount, donationData) {
   try {
     const description = `Donation: ${donationData.purpose} - ${donationData.donorName}`;
 
-    // Create payment intent
     const paymentIntent = await createPayMongoPaymentIntent(
       amount,
       description,
@@ -624,24 +670,21 @@ async function processGCashPayment(amount, donationData) {
         name: donationData.donorName,
         email: donationData.donorEmail,
         phone: donationData.donorPhone,
-      }
+      },
     );
 
-    // Create GCash payment method
     const paymentMethod = await createGCashPaymentMethod({
       name: donationData.donorName,
       email: donationData.donorEmail,
       phone: donationData.donorPhone,
     });
 
-    // Attach payment method to intent
     const result = await attachPaymentMethodToIntent(
       paymentIntent.id,
       paymentMethod.id,
-      `${window.location.origin}/payment-success`
+      `${window.location.origin}/payment-success`,
     );
 
-    // Check if redirect is needed
     if (result.attributes?.next_action?.type === "redirect") {
       const redirectUrl = result.attributes.next_action.redirect.url;
       window.open(redirectUrl, "_blank");
@@ -664,11 +707,11 @@ async function processGCashPayment(amount, donationData) {
       metadata: {
         paymentIntentId: paymentIntent.id,
         paymentMethodId: paymentMethod.id,
+        redirectUrl: result.attributes?.next_action?.redirect?.url || null,
       },
     };
   } catch (error) {
     console.error("GCash payment error:", error);
-    // Fallback to manual processing if PayMongo fails
     return {
       transactionId: `GCASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       paymentIntentId: null,
@@ -683,7 +726,7 @@ async function processGCashPayment(amount, donationData) {
       item: donationData.item,
       purpose: donationData.purpose,
       paymentMethod: "gcash",
-      metadata: { fallback: true },
+      metadata: { fallback: true, error: error.message },
     };
   }
 }
@@ -703,7 +746,7 @@ async function processPayMayaPayment(amount, donationData) {
         name: donationData.donorName,
         email: donationData.donorEmail,
         phone: donationData.donorPhone,
-      }
+      },
     );
 
     const paymentMethod = await createPayMayaPaymentMethod({
@@ -715,7 +758,7 @@ async function processPayMayaPayment(amount, donationData) {
     const result = await attachPaymentMethodToIntent(
       paymentIntent.id,
       paymentMethod.id,
-      `${window.location.origin}/payment-success`
+      `${window.location.origin}/payment-success`,
     );
 
     if (result.attributes?.next_action?.type === "redirect") {
@@ -740,6 +783,7 @@ async function processPayMayaPayment(amount, donationData) {
       metadata: {
         paymentIntentId: paymentIntent.id,
         paymentMethodId: paymentMethod.id,
+        redirectUrl: result.attributes?.next_action?.redirect?.url || null,
       },
     };
   } catch (error) {
@@ -758,7 +802,7 @@ async function processPayMayaPayment(amount, donationData) {
       item: donationData.item,
       purpose: donationData.purpose,
       paymentMethod: "paymaya",
-      metadata: { fallback: true },
+      metadata: { fallback: true, error: error.message },
     };
   }
 }
@@ -769,7 +813,6 @@ async function processPayMayaPayment(amount, donationData) {
 async function processBankTransfer(amount, donationData) {
   const reference = `BANK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-  // Show bank details to user
   setTimeout(() => {
     window.showAlert(
       "Bank Transfer Instructions",
@@ -835,6 +878,60 @@ async function processCashPayment(amount, donationData) {
       reference: reference,
     },
   };
+}
+
+/**
+ * Verify payment on return from PayMongo
+ */
+async function verifyPaymentOnReturn(paymentIntentId) {
+  try {
+    showLoading("Verifying payment...");
+
+    const paymentStatus = await checkPaymentStatus(paymentIntentId);
+
+    if (paymentStatus.attributes.status === "succeeded") {
+      window.showAlert(
+        "Payment Successful!",
+        "Your donation has been processed successfully. Thank you!",
+        "success",
+      );
+
+      if (currentDonationData) {
+        await saveDonation({
+          ...currentDonationData,
+          amount: paymentStatus.attributes.amount / 100,
+          status: STATUS.PENDING,
+          paymentIntentId: paymentIntentId,
+          transactionId: paymentIntentId,
+          paymentMethod: "gcash/paymaya",
+          timestamp: new Date().toISOString(),
+        });
+        currentDonationData = null;
+      }
+    } else if (paymentStatus.attributes.status === "awaiting_payment_method") {
+      window.showAlert(
+        "Payment Pending",
+        "Please complete the payment process. Your donation is waiting for payment.",
+        "warning",
+      );
+    } else {
+      window.showAlert(
+        "Payment Failed",
+        `Payment status: ${paymentStatus.attributes.status}. Please try again.`,
+        "error",
+      );
+    }
+
+    hideLoading();
+  } catch (error) {
+    hideLoading();
+    console.error("Payment verification error:", error);
+    window.showAlert(
+      "Verification Failed",
+      "We couldn't verify your payment. Please contact support.",
+      "error",
+    );
+  }
 }
 
 // ===== SESSION MANAGEMENT =====
@@ -950,7 +1047,7 @@ function saveUserSession(ud) {
         : ud.lastActive,
     };
     localStorage.setItem("barangayUser", JSON.stringify(sd));
-  } catch (e) { }
+  } catch (e) {}
 }
 function clearUserSession() {
   try {
@@ -958,12 +1055,12 @@ function clearUserSession() {
     sessionStorage.removeItem("userActiveTab");
     sessionStorage.removeItem("registeredEvents");
     sessionStorage.removeItem("completedEvents");
-  } catch (e) { }
+  } catch (e) {}
 }
 function saveActiveTab(t) {
   try {
     sessionStorage.setItem("userActiveTab", t);
-  } catch (e) { }
+  } catch (e) {}
 }
 function getSavedActiveTab() {
   try {
@@ -1218,6 +1315,9 @@ window.showAlert = function (title, message, type = "success") {
   if (type === "success") {
     if (ib) ib.className = "p-1.5 rounded-lg text-white bg-emerald-500";
     if (ic) ic.className = "fa-solid fa-circle-check text-sm";
+  } else if (type === "warning") {
+    if (ib) ib.className = "p-1.5 rounded-lg text-white bg-amber-500";
+    if (ic) ic.className = "fa-solid fa-triangle-exclamation text-sm";
   } else {
     if (ib) ib.className = "p-1.5 rounded-lg text-white bg-rose-500";
     if (ic) ic.className = "fa-solid fa-circle-exclamation text-sm";
@@ -1441,7 +1541,7 @@ document
 document.getElementById("login-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const email =
-    document.getElementById("login-email")?.value.trim().toLowerCase() || "",
+      document.getElementById("login-email")?.value.trim().toLowerCase() || "",
     pass = document.getElementById("login-password")?.value || "";
   if (!email || !pass) {
     window.showAlert("Error", "Enter email and password.", "error");
@@ -1876,8 +1976,8 @@ function closeMobileNotificationOnClickOutside(e) {
 }
 function renderMobileNotificationDropdown() {
   const container = document.getElementById(
-    "mobile-notification-dropdown-list",
-  ),
+      "mobile-notification-dropdown-list",
+    ),
     unreadSpan = document.getElementById("mobile-dropdown-unread-count"),
     toggleBtn = document.getElementById("mobile-notification-toggle-more-btn"),
     dropdown = document.getElementById("mobile-notification-dropdown");
@@ -2118,9 +2218,12 @@ if (profileForm) {
     const phone = document.getElementById("prof-phone")?.value.trim() || "";
     const address = document.getElementById("prof-address")?.value.trim() || "";
     const pi = document.getElementById("prof-password");
-    const password = pi && pi.value.trim() !== "" ? pi.value.trim() : loggedInUser.password;
+    const password =
+      pi && pi.value.trim() !== "" ? pi.value.trim() : loggedInUser.password;
 
-    const hasNonPwdChanges = phone !== (loggedInUser.phone || "") || address !== (loggedInUser.address || "");
+    const hasNonPwdChanges =
+      phone !== (loggedInUser.phone || "") ||
+      address !== (loggedInUser.address || "");
     const hasPwdChange = password !== (loggedInUser.password || "");
     const hasInfoChanges = hasNonPwdChanges || hasPwdChange;
     const hasPicChange = selectedProfilePicFile !== undefined;
@@ -2197,7 +2300,7 @@ if (profileForm) {
       if (isRemoving) msg += (msg ? " & " : "") + "picture removed";
 
       window.showAlert("Success!", msg + "! Fields locked.", "success");
-      document.getElementById('prof-password').type = 'password';
+      document.getElementById("prof-password").type = "password";
     } catch (error) {
       hideLoading();
       window.showAlert("Error", `Failed: ${error.message}`, "error");
@@ -2470,18 +2573,53 @@ function renderPublicEvents() {
 
         let typeIcon, placeholderGradient;
         switch (ev.type) {
-          case "Seminar": typeIcon = "fa-chalkboard-user"; placeholderGradient = "from-[#800000] to-[#A52A2A]"; break;
-          case "Workshop": typeIcon = "fa-toolbox"; placeholderGradient = "from-[#A52A2A] to-[#8B0000]"; break;
-          case "Meeting": typeIcon = "fa-users"; placeholderGradient = "from-[#B8960C] to-[#8B6914]"; break;
-          case "Sports": typeIcon = "fa-futbol"; placeholderGradient = "from-[#0D3B5C] to-[#0A2947]"; break;
-          case "Health": typeIcon = "fa-heart-pulse"; placeholderGradient = "from-[#8B0000] to-[#600000]"; break;
-          case "Training": typeIcon = "fa-graduation-cap"; placeholderGradient = "from-[#1A5276] to-[#0A2947]"; break;
-          case "Celebration": typeIcon = "fa-cake-candles"; placeholderGradient = "from-[#FFD700] to-[#B8960C]"; break;
-          case "Outreach": typeIcon = "fa-hand-holding-heart"; placeholderGradient = "from-[#0A2947] to-[#1A5276]"; break;
-          case "Environmental": typeIcon = "fa-leaf"; placeholderGradient = "from-[#2B0000] to-[#0A2947]"; break;
-          case "Cultural": typeIcon = "fa-masks-theater"; placeholderGradient = "from-[#FFD700] to-[#CCAC00]"; break;
-          case "Fundraising": typeIcon = "fa-sack-dollar"; placeholderGradient = "from-[#A52A2A] to-[#800000]"; break;
-          default: typeIcon = "fa-calendar-check"; placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+          case "Seminar":
+            typeIcon = "fa-chalkboard-user";
+            placeholderGradient = "from-[#800000] to-[#A52A2A]";
+            break;
+          case "Workshop":
+            typeIcon = "fa-toolbox";
+            placeholderGradient = "from-[#A52A2A] to-[#8B0000]";
+            break;
+          case "Meeting":
+            typeIcon = "fa-users";
+            placeholderGradient = "from-[#B8960C] to-[#8B6914]";
+            break;
+          case "Sports":
+            typeIcon = "fa-futbol";
+            placeholderGradient = "from-[#0D3B5C] to-[#0A2947]";
+            break;
+          case "Health":
+            typeIcon = "fa-heart-pulse";
+            placeholderGradient = "from-[#8B0000] to-[#600000]";
+            break;
+          case "Training":
+            typeIcon = "fa-graduation-cap";
+            placeholderGradient = "from-[#1A5276] to-[#0A2947]";
+            break;
+          case "Celebration":
+            typeIcon = "fa-cake-candles";
+            placeholderGradient = "from-[#FFD700] to-[#B8960C]";
+            break;
+          case "Outreach":
+            typeIcon = "fa-hand-holding-heart";
+            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+            break;
+          case "Environmental":
+            typeIcon = "fa-leaf";
+            placeholderGradient = "from-[#2B0000] to-[#0A2947]";
+            break;
+          case "Cultural":
+            typeIcon = "fa-masks-theater";
+            placeholderGradient = "from-[#FFD700] to-[#CCAC00]";
+            break;
+          case "Fundraising":
+            typeIcon = "fa-sack-dollar";
+            placeholderGradient = "from-[#A52A2A] to-[#800000]";
+            break;
+          default:
+            typeIcon = "fa-calendar-check";
+            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
         }
 
         const hasImage = ev.imageUrl && ev.imageUrl !== "";
@@ -2530,18 +2668,53 @@ function renderMyEvents() {
 
         let typeIcon, placeholderGradient;
         switch (ev.type) {
-          case "Seminar": typeIcon = "fa-chalkboard-user"; placeholderGradient = "from-[#800000] to-[#A52A2A]"; break;
-          case "Workshop": typeIcon = "fa-toolbox"; placeholderGradient = "from-[#A52A2A] to-[#8B0000]"; break;
-          case "Meeting": typeIcon = "fa-users"; placeholderGradient = "from-[#B8960C] to-[#8B6914]"; break;
-          case "Sports": typeIcon = "fa-futbol"; placeholderGradient = "from-[#0D3B5C] to-[#0A2947]"; break;
-          case "Health": typeIcon = "fa-heart-pulse"; placeholderGradient = "from-[#8B0000] to-[#600000]"; break;
-          case "Training": typeIcon = "fa-graduation-cap"; placeholderGradient = "from-[#1A5276] to-[#0A2947]"; break;
-          case "Celebration": typeIcon = "fa-cake-candles"; placeholderGradient = "from-[#FFD700] to-[#B8960C]"; break;
-          case "Outreach": typeIcon = "fa-hand-holding-heart"; placeholderGradient = "from-[#0A2947] to-[#1A5276]"; break;
-          case "Environmental": typeIcon = "fa-leaf"; placeholderGradient = "from-[#2B0000] to-[#0A2947]"; break;
-          case "Cultural": typeIcon = "fa-masks-theater"; placeholderGradient = "from-[#FFD700] to-[#CCAC00]"; break;
-          case "Fundraising": typeIcon = "fa-sack-dollar"; placeholderGradient = "from-[#A52A2A] to-[#800000]"; break;
-          default: typeIcon = "fa-calendar-check"; placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+          case "Seminar":
+            typeIcon = "fa-chalkboard-user";
+            placeholderGradient = "from-[#800000] to-[#A52A2A]";
+            break;
+          case "Workshop":
+            typeIcon = "fa-toolbox";
+            placeholderGradient = "from-[#A52A2A] to-[#8B0000]";
+            break;
+          case "Meeting":
+            typeIcon = "fa-users";
+            placeholderGradient = "from-[#B8960C] to-[#8B6914]";
+            break;
+          case "Sports":
+            typeIcon = "fa-futbol";
+            placeholderGradient = "from-[#0D3B5C] to-[#0A2947]";
+            break;
+          case "Health":
+            typeIcon = "fa-heart-pulse";
+            placeholderGradient = "from-[#8B0000] to-[#600000]";
+            break;
+          case "Training":
+            typeIcon = "fa-graduation-cap";
+            placeholderGradient = "from-[#1A5276] to-[#0A2947]";
+            break;
+          case "Celebration":
+            typeIcon = "fa-cake-candles";
+            placeholderGradient = "from-[#FFD700] to-[#B8960C]";
+            break;
+          case "Outreach":
+            typeIcon = "fa-hand-holding-heart";
+            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+            break;
+          case "Environmental":
+            typeIcon = "fa-leaf";
+            placeholderGradient = "from-[#2B0000] to-[#0A2947]";
+            break;
+          case "Cultural":
+            typeIcon = "fa-masks-theater";
+            placeholderGradient = "from-[#FFD700] to-[#CCAC00]";
+            break;
+          case "Fundraising":
+            typeIcon = "fa-sack-dollar";
+            placeholderGradient = "from-[#A52A2A] to-[#800000]";
+            break;
+          default:
+            typeIcon = "fa-calendar-check";
+            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
         }
 
         const hasImage = ev.imageUrl && ev.imageUrl !== "";
@@ -2823,12 +2996,12 @@ document
         experience,
         verificationFile: verificationData
           ? {
-            fileName: selectedSkillVerificationFile.name,
-            fileType: selectedSkillVerificationFile.type,
-            fileSize: selectedSkillVerificationFile.size,
-            data: verificationData,
-            uploadedAt: new Date().toISOString(),
-          }
+              fileName: selectedSkillVerificationFile.name,
+              fileType: selectedSkillVerificationFile.type,
+              fileSize: selectedSkillVerificationFile.size,
+              data: verificationData,
+              uploadedAt: new Date().toISOString(),
+            }
           : null,
         notes,
         availability,
@@ -2986,46 +3159,61 @@ window.toggleModal = function (modalId) {
 // ===== PRIVACY POLICY LOADING =====
 function handlePrivacyPolicyClick(event) {
   event.preventDefault();
-  const overlay = document.getElementById('page-loading-overlay');
-  const href = event.currentTarget.getAttribute('href');
-  overlay.classList.add('active');
+  const overlay = document.getElementById("page-loading-overlay");
+  const href = event.currentTarget.getAttribute("href");
+  overlay.classList.add("active");
   const minLoadTime = 2000;
   const startTime = Date.now();
-  const link = document.createElement('link');
-  link.rel = 'prefetch';
+  const link = document.createElement("link");
+  link.rel = "prefetch";
   link.href = href;
   document.head.appendChild(link);
   function navigateToPrivacy() {
     const elapsed = Date.now() - startTime;
     const remaining = Math.max(0, minLoadTime - elapsed);
-    setTimeout(() => { window.location.href = href; }, remaining);
+    setTimeout(() => {
+      window.location.href = href;
+    }, remaining);
   }
   navigateToPrivacy();
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-  const privacyLinks = document.querySelectorAll('a[href="privacy-policy.html"]');
-  privacyLinks.forEach(link => {
-    link.addEventListener('click', handlePrivacyPolicyClick);
+document.addEventListener("DOMContentLoaded", function () {
+  const privacyLinks = document.querySelectorAll(
+    'a[href="privacy-policy.html"]',
+  );
+  privacyLinks.forEach((link) => {
+    link.addEventListener("click", handlePrivacyPolicyClick);
   });
-  document.addEventListener('click', function (e) {
+  document.addEventListener("click", function (e) {
     const privacyLink = e.target.closest('a[href="privacy-policy.html"]');
-    if (privacyLink && !privacyLink.hasAttribute('data-listener-attached')) {
+    if (privacyLink && !privacyLink.hasAttribute("data-listener-attached")) {
       e.preventDefault();
-      privacyLink.setAttribute('data-listener-attached', 'true');
+      privacyLink.setAttribute("data-listener-attached", "true");
       handlePrivacyPolicyClick(e);
     }
   });
 });
 
-window.addEventListener('pageshow', function (event) {
-  const overlay = document.getElementById('page-loading-overlay');
-  if (overlay && event.persisted) overlay.classList.remove('active');
+window.addEventListener("pageshow", function (event) {
+  const overlay = document.getElementById("page-loading-overlay");
+  if (overlay && event.persisted) overlay.classList.remove("active");
 });
 
-window.addEventListener('load', function () {
-  const overlay = document.getElementById('page-loading-overlay');
-  if (overlay) setTimeout(() => { overlay.classList.remove('active'); }, 300);
+window.addEventListener("load", function () {
+  const overlay = document.getElementById("page-loading-overlay");
+  if (overlay)
+    setTimeout(() => {
+      overlay.classList.remove("active");
+    }, 300);
+
+  // Check if returning from PayMongo payment
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentIntentId = urlParams.get("payment_intent_id");
+
+  if (paymentIntentId) {
+    verifyPaymentOnReturn(paymentIntentId);
+  }
 });
 
 // ===== INITIALIZATION =====
@@ -3083,16 +3271,24 @@ document.addEventListener("DOMContentLoaded", () => {
               const parsedSession = JSON.parse(savedSession);
               if (!currentSessionToken && userData.sessionToken)
                 currentSessionToken = userData.sessionToken;
-            } catch (e) { }
+            } catch (e) {}
           }
           loggedInUser = { id: snap.id, ...userData };
           saveUserSession(loggedInUser);
           const se = sessionStorage.getItem("registeredEvents");
           if (se)
-            try { registeredEventIds = new Set(JSON.parse(se)); } catch (e) { registeredEventIds = new Set(); }
+            try {
+              registeredEventIds = new Set(JSON.parse(se));
+            } catch (e) {
+              registeredEventIds = new Set();
+            }
           const sc = sessionStorage.getItem("completedEvents");
           if (sc)
-            try { completedEventIds = new Set(JSON.parse(sc)); } catch (e) { completedEventIds = new Set(); }
+            try {
+              completedEventIds = new Set(JSON.parse(sc));
+            } catch (e) {
+              completedEventIds = new Set();
+            }
           document.getElementById("auth-screen")?.classList.add("hidden");
           document.getElementById("dashboard")?.classList.remove("hidden");
           showNotificationBell();
@@ -3112,7 +3308,9 @@ document.addEventListener("DOMContentLoaded", () => {
           await signOut(auth);
           hideLoading();
         }
-      } catch (e) { hideLoading(); }
+      } catch (e) {
+        hideLoading();
+      }
     } else {
       clearUserSession();
       loggedInUser = null;
@@ -3126,8 +3324,14 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 window.addEventListener("beforeunload", () => {
   if (loggedInUser?.id) {
-    sessionStorage.setItem("registeredEvents", JSON.stringify([...registeredEventIds]));
-    sessionStorage.setItem("completedEvents", JSON.stringify([...completedEventIds]));
+    sessionStorage.setItem(
+      "registeredEvents",
+      JSON.stringify([...registeredEventIds]),
+    );
+    sessionStorage.setItem(
+      "completedEvents",
+      JSON.stringify([...completedEventIds]),
+    );
     setUserStatus(loggedInUser.id, false);
   }
   stopSessionHeartbeat();
@@ -3183,7 +3387,7 @@ window.triggerLogoutConfirmation = function () {
           isOnline: false,
           lastActive: serverTimestamp(),
         });
-      } catch (e) { }
+      } catch (e) {}
     }
     await signOut(auth);
     clearUserSession();
@@ -3221,40 +3425,58 @@ function showLogoutBanner() {
   if (existingBanner) existingBanner.remove();
   const banner = document.createElement("div");
   banner.id = "logout-banner";
-  banner.className = "fixed top-0 left-0 right-0 z-[300] transform -translate-y-full transition-transform duration-500 ease-in-out";
+  banner.className =
+    "fixed top-0 left-0 right-0 z-[300] transform -translate-y-full transition-transform duration-500 ease-in-out";
   banner.innerHTML = `<div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-4 shadow-2xl"><div class="max-w-4xl mx-auto flex items-center justify-between"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"><i class="fa-solid fa-circle-check text-white text-lg"></i></div><div><h3 class="font-extrabold text-sm">Successfully Logged Out</h3><p class="text-xs text-emerald-100 mt-0.5">You have been securely signed out of your account.</p></div></div><button onclick="closeLogoutBanner()" class="text-white/80 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-sm"></i></button></div></div>`;
   document.body.appendChild(banner);
-  setTimeout(() => { banner.classList.remove("-translate-y-full"); banner.classList.add("translate-y-0"); }, 100);
-  setTimeout(() => { closeLogoutBanner(); }, 7000);
+  setTimeout(() => {
+    banner.classList.remove("-translate-y-full");
+    banner.classList.add("translate-y-0");
+  }, 100);
+  setTimeout(() => {
+    closeLogoutBanner();
+  }, 7000);
 }
 window.closeLogoutBanner = function () {
   const banner = document.getElementById("logout-banner");
   if (banner) {
     banner.classList.add("-translate-y-full");
     banner.classList.remove("translate-y-0");
-    setTimeout(() => { banner.remove(); }, 500);
+    setTimeout(() => {
+      banner.remove();
+    }, 500);
   }
 };
-document.getElementById("payment-modal-close")?.addEventListener("click", function () {
-  currentDonationData = null;
-  selectedPaymentMethod = null;
-  document.getElementById("payment-form")?.reset();
-  document.querySelectorAll(".payment-method-btn").forEach((b) => b.classList.remove("selected"));
-  const qr = document.getElementById("qr-code-container");
-  if (qr) qr.classList.add("hidden");
-  window.toggleModal("payment-modal");
-});
-document.getElementById("payment-modal")?.addEventListener("click", function (e) {
-  if (e.target === this) {
+document
+  .getElementById("payment-modal-close")
+  ?.addEventListener("click", function () {
     currentDonationData = null;
     selectedPaymentMethod = null;
+    currentPaymentIntentId = null;
     document.getElementById("payment-form")?.reset();
-    document.querySelectorAll(".payment-method-btn").forEach((b) => b.classList.remove("selected"));
-    this.classList.add("hidden");
+    document
+      .querySelectorAll(".payment-method-btn")
+      .forEach((b) => b.classList.remove("selected"));
     const qr = document.getElementById("qr-code-container");
     if (qr) qr.classList.add("hidden");
-  }
-});
+    window.toggleModal("payment-modal");
+  });
+document
+  .getElementById("payment-modal")
+  ?.addEventListener("click", function (e) {
+    if (e.target === this) {
+      currentDonationData = null;
+      selectedPaymentMethod = null;
+      currentPaymentIntentId = null;
+      document.getElementById("payment-form")?.reset();
+      document
+        .querySelectorAll(".payment-method-btn")
+        .forEach((b) => b.classList.remove("selected"));
+      this.classList.add("hidden");
+      const qr = document.getElementById("qr-code-container");
+      if (qr) qr.classList.add("hidden");
+    }
+  });
 
 // Global function exports
 window.joinEvent = window.confirmJoinEvent;
