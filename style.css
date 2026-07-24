@@ -263,9 +263,11 @@ textarea:focus {
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
     }
-}
-
-@media (max-width: 1023px) {
+    
+    #prof-settings-mobile {
+        display: none !important;
+    }
+    
     #sidebar #notification-bell-container {
         display: none !important;
     }
