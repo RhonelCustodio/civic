@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description"
+        content="OneVictoria Resident Hub Help Center - Find answers to common questions and get support.">
+    <title>Help Center · OneVictoria Resident Hub</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        tsu: {
+                            blue: '#0A2947', blueLight: '#0D3B5C', blueDark: '#061B2E',
+                            gold: '#FFD700', goldLight: '#FFE44D', goldDark: '#CCAC00',
+                            dark: '#2B0000', light: '#E8F0FE', accent: '#1A5276', muted: '#94A3B8',
+                        },
+                        surface: { DEFAULT: '#FFFFFF', alt: '#F8FAFC', hover: '#F1F5F9', border: '#E2E8F0' },
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..800&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="gemini-svg%20(1).svg" type="image/x-icon">
+    <style>
+        * {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ===== FIXED SIDEBAR ===== */
+        .sidebar {
+            width: 300px;
+            min-width: 300px;
+            height: 100vh;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.04);
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            flex-shrink: 0;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-logo .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #0A2947, #1A5276);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(10, 41, 71, 0.2);
+        }
+
+        .sidebar-logo h2 {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0A2947;
+            letter-spacing: -0.3px;
+        }
+
+        .sidebar-logo span {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 0.75rem;
+            overscroll-behavior: contain;
+        }
+
+        .sidebar-nav-title {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 0.5rem 0.75rem 0.75rem;
+        }
+
+        .toc-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1rem;
+            border-radius: 10px;
+            font-size: 0.8125rem;
+            color: #64748b;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            margin-bottom: 2px;
+            cursor: pointer;
+        }
+
+        .toc-link:hover {
+            background: #f8fafc;
+            color: #0A2947;
+        }
+
+        .toc-link.active {
+            background: #E8F0FE;
+            color: #0A2947;
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 #0A2947;
+            border-radius: 10px;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid #f1f5f9;
+            flex-shrink: 0;
+        }
+
+        .btn-back {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn-back:hover {
+            border-color: #0A2947;
+            color: #0A2947;
+            background: #f1f5f9;
+            box-shadow: 0 4px 12px rgba(10, 41, 71, 0.1);
+        }
+
+        /* ===== SCROLLABLE CONTENT AREA ===== */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            height: 100vh;
+            padding: 2rem 2.5rem;
+        }
+
+        .help-container {
+            max-width: 900px;
+        }
+
+        /* Header */
+        .help-header {
+            background: linear-gradient(135deg, #0A2947 0%, #0D3B5C 40%, #1A5276 100%);
+            padding: 2.5rem;
+            border-radius: 24px 24px 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .help-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .help-body {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 0 0 24px 24px;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+            box-shadow: 0 20px 50px rgba(10, 41, 71, 0.06);
+        }
+
+        /* Section styling */
+        .help-section {
+            margin-bottom: 2.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #f1f5f9;
+            scroll-margin-top: 2rem;
+        }
+
+        .help-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .section-title {
+            color: #0A2947;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: -0.3px;
+        }
+
+        /* FAQ Cards */
+        .faq-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .faq-card:hover {
+            border-color: #0A2947;
+            box-shadow: 0 4px 16px rgba(10, 41, 71, 0.06);
+        }
+
+        .faq-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+            text-align: left;
+            gap: 1rem;
+        }
+
+        .faq-toggle:hover {
+            background: #f8fafc;
+        }
+
+        .faq-toggle i {
+            transition: transform 0.3s ease;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .faq-toggle.expanded i {
+            transform: rotate(180deg);
+            color: #0A2947;
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, padding 0.35s ease;
+        }
+
+        .faq-answer.expanded {
+            max-height: 1000px;
+        }
+
+        .faq-answer-content {
+            padding: 0 1.25rem 1.25rem;
+            color: #475569;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        .faq-answer-content p {
+            margin-bottom: 0.75rem;
+        }
+
+        .faq-answer-content ul,
+        .faq-answer-content ol {
+            margin-bottom: 0.75rem;
+            padding-left: 1.25rem;
+        }
+
+        .faq-answer-content ul {
+            list-style-type: disc;
+        }
+
+        .faq-answer-content ol {
+            list-style-type: decimal;
+        }
+
+        .faq-answer-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .faq-answer-content strong {
+            color: #0A2947;
+            font-weight: 600;
+        }
+
+        /* Info boxes */
+        .tip-box {
+            background: #fffbeb;
+            border-left: 4px solid #FFD700;
+            padding: 0.75rem 1rem;
+            border-radius: 0 10px 10px 0;
+            margin: 0.75rem 0;
+            font-size: 0.85rem;
+            color: #92400e;
+        }
+
+        .info-box {
+            background: #E8F0FE;
+            border-left: 4px solid #0A2947;
+            padding: 0.75rem 1rem;
+            border-radius: 0 10px 10px 0;
+            margin: 0.75rem 0;
+            font-size: 0.85rem;
+            color: #1e40af;
+        }
+
+        .warning-box {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 0.75rem 1rem;
+            border-radius: 0 10px 10px 0;
+            margin: 0.75rem 0;
+            font-size: 0.85rem;
+            color: #991b1b;
+        }
+
+        /* Status badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .status-registered {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-completed {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-cancelled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Contact cards */
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .contact-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .contact-card:hover {
+            border-color: #0A2947;
+            box-shadow: 0 4px 16px rgba(10, 41, 71, 0.06);
+            transform: translateY(-2px);
+        }
+
+        .contact-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .search-highlight {
+            background-color: #FFE44D;
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 600;
+        }
+
+        .content-footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            gap: 0.75rem;
+        }
+
+        .content-footer a {
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .content-footer a:hover {
+            color: #0A2947;
+        }
+
+        .content-footer .current {
+            color: #0A2947;
+            font-weight: 600;
+        }
+
+        /* Mobile */
+        .mobile-sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 50;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                left: -300px;
+                top: 0;
+                bottom: 0;
+                z-index: 40;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.4);
+                z-index: 39;
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+
+            .mobile-sidebar-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+            }
+
+            .content-area {
+                padding: 1rem;
+            }
+
+            .help-header {
+                padding: 1.5rem;
+            }
+
+            .help-body {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .content-area {
+                padding: 0.5rem;
+            }
+        }
+
+        @media print {
+            body {
+                overflow: auto;
+                background: white;
+            }
+
+            .sidebar,
+            .mobile-sidebar-toggle,
+            .sidebar-overlay {
+                display: none !important;
+            }
+
+            .content-area {
+                overflow: visible;
+                height: auto;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+
+<body class="antialiased text-gray-800">
+
+    <button class="mobile-sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation">
+        <i class="fa-solid fa-bars text-xl text-gray-600"></i>
+    </button>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="app-layout">
+
+        <!-- ===== FIXED SIDEBAR ===== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-icon">
+                        <i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i>
+                    </div>
+                    <div>
+                        <h2>OneVictoria</h2>
+                        <span>Help Center</span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <p class="sidebar-nav-title">Topics</p>
+                <a href="#getting-started" class="toc-link active" onclick="closeSidebarMobile()">
+                    <span>Getting Started</span>
+                </a>
+                <a href="#account-management" class="toc-link" onclick="closeSidebarMobile()">
+                    <span>Account Management</span>
+                </a>
+                <a href="#events-registration" class="toc-link" onclick="closeSidebarMobile()">
+                    <span>Events & Registration</span>
+                </a>
+                <a href="#volunteering" class="toc-link" onclick="closeSidebarMobile()">
+                    <span>Volunteering</span>
+                </a>
+                <a href="#service-hours" class="toc-link" onclick="closeSidebarMobile()">
+                    <span>Service Hours</span>
+                </a>
+                <a href="#donations" class="toc-link" onclick="closeSidebarMobile()">
+                    <span>Donations</span>
+                </a>
+                <a href="#notifications" class="toc-link" onclick="closeSidebarMobile()">
+                    <span>Notifications</span>
+                </a>
+                <a href="#troubleshooting" class="toc-link" onclick="closeSidebarMobile()">
+                    <span>Troubleshooting</span>
+                </a>
+                <a href="#contact-support" class="toc-link" onclick="closeSidebarMobile()">
+                    <span>Contact Support</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="index.html" window.location.replace(this.href); class="btn-back">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                    Back to Homepage
+                </a>
+            </div>
+        </aside>
+
+        <!-- ===== SCROLLABLE CONTENT AREA ===== -->
+        <main class="content-area" id="content-area">
+            <div class="help-container">
+
+                <!-- Header -->
+                <div class="help-header text-white relative z-10">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div
+                            class="w-14 h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fa-solid fa-headset text-tsu-gold text-2xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Help Center</h1>
+                            <p class="text-gray-300 text-sm mt-1">OneVictoria Resident Hub</p>
+                        </div>
+                    </div>
+                    <p class="mt-4 text-gray-400 text-sm max-w-2xl">
+                        Find answers to common questions about using the OneVictoria platform.
+                        Browse topics below or use the search to quickly locate information.
+                    </p>
+                    <!-- Search -->
+                    <div class="relative max-w-md mt-5">
+                        <i
+                            class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" id="help-search"
+                            class="w-full pl-11 pr-4 py-2.5 rounded-xl border-2 border-transparent focus:border-tsu-gold focus:ring-2 focus:ring-tsu-gold/30 text-sm shadow-lg transition-all bg-white text-gray-800"
+                            placeholder="Search help articles... (e.g., register, events, password)">
+                        <div id="search-results"
+                            class="hidden absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 max-h-72 overflow-y-auto text-left text-gray-800">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class="help-body">
+
+                    <!-- Getting Started -->
+                    <section id="getting-started" class="help-section">
+                        <h2 class="section-title mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-rocket text-tsu-gold text-lg"></i>Getting Started
+                        </h2>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>What is OneVictoria?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <p>OneVictoria is the official resident engagement platform for the Municipality of
+                                        Victoria. This digital hub connects citizens with municipal services, community
+                                        events, volunteer programs, and civic announcements. The platform enables
+                                        residents to:</p>
+                                    <ul>
+                                        <li>Register for community events and programs</li>
+                                        <li>Submit volunteer applications for municipal initiatives</li>
+                                        <li>Track community service hour contributions</li>
+                                        <li>Make monetary or in-kind donations to support local causes</li>
+                                        <li>Receive real-time notifications regarding community updates</li>
+                                        <li>Manage personal profile information securely</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How do I create a new account?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ol>
+                                        <li>Navigate to the OneVictoria portal homepage</li>
+                                        <li>On the authentication panel, select <strong>"Create Account"</strong></li>
+                                        <li>Complete the registration form with your full name, email, phone, age,
+                                            gender, and address</li>
+                                        <li>Create a secure password (minimum 6 characters)</li>
+                                        <li>Confirm your password and click <strong>"Create Account"</strong></li>
+                                    </ol>
+                                    <div class="tip-box">
+                                        <i class="fa-solid fa-lightbulb mr-1.5"></i>
+                                        <strong>Tip:</strong> Use an active email address as this will serve as your
+                                        primary credential for account recovery and notifications.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How do I sign in to my account?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ol>
+                                        <li>Visit the OneVictoria portal</li>
+                                        <li>Enter your <strong>registered email address</strong> and
+                                            <strong>password</strong></li>
+                                        <li>Select <strong>"Access Portal"</strong></li>
+                                    </ol>
+                                    <div class="warning-box">
+                                        <i class="fa-solid fa-triangle-exclamation mr-1.5"></i>
+                                        <strong>Important:</strong> If you cannot access your account, please refer to
+                                        the Troubleshooting section or contact support.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>Understanding the Dashboard Interface</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <p>The dashboard uses a header navigation system with dropdown menus:</p>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                                        <div style="background:#f8fafc;padding:0.5rem;border-radius:8px;">
+                                            <strong>Announcements</strong><br><span
+                                                style="font-size:0.8rem;color:#64748b;">Municipal broadcasts</span>
+                                        </div>
+                                        <div style="background:#f8fafc;padding:0.5rem;border-radius:8px;">
+                                            <strong>Events</strong><br><span
+                                                style="font-size:0.8rem;color:#64748b;">Browse community events</span>
+                                        </div>
+                                        <div style="background:#f8fafc;padding:0.5rem;border-radius:8px;"><strong>My
+                                                Events</strong><br><span
+                                                style="font-size:0.8rem;color:#64748b;">Registered events</span></div>
+                                        <div style="background:#f8fafc;padding:0.5rem;border-radius:8px;">
+                                            <strong>Volunteer</strong><br><span
+                                                style="font-size:0.8rem;color:#64748b;">Application submissions</span>
+                                        </div>
+                                        <div style="background:#f8fafc;padding:0.5rem;border-radius:8px;">
+                                            <strong>Service Hours</strong><br><span
+                                                style="font-size:0.8rem;color:#64748b;">Contribution tracking</span>
+                                        </div>
+                                        <div style="background:#f8fafc;padding:0.5rem;border-radius:8px;">
+                                            <strong>Donations</strong><br><span
+                                                style="font-size:0.8rem;color:#64748b;">Contribution ledger</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Account Management -->
+                    <section id="account-management" class="help-section">
+                        <h2 class="section-title mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-user-gear text-tsu-gold text-lg"></i>Account Management
+                        </h2>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How do I update my profile information?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ol>
+                                        <li>Click your profile picture in the header to open <strong>Profile
+                                                Settings</strong></li>
+                                        <li>Select <strong>"Edit Profile"</strong> to enable editing mode</li>
+                                        <li>Modify editable fields: Mobile Number, Address, and Profile Picture</li>
+                                        <li>Select <strong>"Save Changes"</strong> to apply updates</li>
+                                    </ol>
+                                    <div class="info-box">
+                                        <i class="fa-solid fa-info-circle mr-1.5"></i>
+                                        <strong>Note:</strong> Name, email, gender, and age are fixed fields. Contact
+                                        support to request changes to these.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How do I change my password?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ol>
+                                        <li>Go to <strong>Profile Settings</strong></li>
+                                        <li>Click <strong>"Edit Profile"</strong></li>
+                                        <li>Enter your new password in the password field</li>
+                                        <li>Save your changes</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Events & Registration -->
+                    <section id="events-registration" class="help-section">
+                        <h2 class="section-title mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-check text-tsu-gold text-lg"></i>Events & Registration
+                        </h2>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How do I register for a community event?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ol>
+                                        <li>Go to <strong>News & Events > Events</strong> from the header dropdown</li>
+                                        <li>Browse available upcoming events</li>
+                                        <li>Click <strong>"Register / Join"</strong> on any event card</li>
+                                        <li>Confirm your registration in the dialog</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>Can I cancel an event registration?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ol>
+                                        <li>Go to <strong>My Events</strong></li>
+                                        <li>Click <strong>"Cancel Registration"</strong> on the event card</li>
+                                        <li>Confirm the cancellation</li>
+                                    </ol>
+                                    <div class="tip-box">
+                                        <i class="fa-solid fa-lightbulb mr-1.5"></i>
+                                        <strong>Tip:</strong> Cancel at least 24 hours before the event to allow others
+                                        to participate.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>What do event status indicators mean?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                                            <span class="status-badge status-registered">Registered</span>
+                                            <span>Your registration has been processed successfully.</span>
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                                            <span class="status-badge status-completed">Completed</span>
+                                            <span>You attended the event and received service hour credit.</span>
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                                            <span class="status-badge status-cancelled">Cancelled</span>
+                                            <span>Registration was cancelled by you or the organizer.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Volunteering -->
+                    <section id="volunteering" class="help-section">
+                        <h2 class="section-title mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-hands-holding text-tsu-gold text-lg"></i>Volunteering
+                        </h2>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How do I submit a volunteer application?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ol>
+                                        <li>Go to <strong>Community > Volunteer</strong></li>
+                                        <li>Select your primary skill and experience level</li>
+                                        <li>Upload skill verification document (certificate or proof)</li>
+                                        <li>Choose your availability</li>
+                                        <li>Click <strong>"Submit Application"</strong></li>
+                                    </ol>
+                                    <div class="info-box">
+                                        <i class="fa-solid fa-clock mr-1.5"></i>
+                                        Applications undergo review by organizers. You'll receive a notification upon
+                                        status change.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>What documents are accepted for skill verification?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <p>Accepted formats (max 5MB):</p>
+                                    <ul>
+                                        <li><strong>PDF</strong> — Certificates, training documents, licenses</li>
+                                        <li><strong>JPG / PNG</strong> — Photos of certificates or credentials</li>
+                                        <li><strong>DOC / DOCX</strong> — Reference letters, verification documents</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Service Hours -->
+                    <section id="service-hours" class="help-section">
+                        <h2 class="section-title mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-clock text-tsu-gold text-lg"></i>Service Hours
+                        </h2>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How are community service hours earned?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <p>Service hours are accrued through active participation in registered community
+                                        events. When you attend an event, the organizer may certify your participation
+                                        hours. These are recorded in your <strong>Service Hours</strong> tab.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>What do certification statuses mean?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                                            <span class="status-badge status-registered">Approved</span>
+                                            <span>Hours verified by an authorized organizer.</span>
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                                            <span class="status-badge status-pending">Pending</span>
+                                            <span>Hours awaiting verification from the organizer.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Donations -->
+                    <section id="donations" class="help-section">
+                        <h2 class="section-title mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-hand-holding-heart text-tsu-gold text-lg"></i>Donations
+                        </h2>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How do I make a donation?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ol>
+                                        <li>Go to <strong>Community > Donations</strong></li>
+                                        <li>Enter the item or amount and purpose</li>
+                                        <li>Click <strong>"Submit Donation"</strong></li>
+                                        <li>Select payment method (GCash, PayMaya, Bank Transfer, or Cash)</li>
+                                        <li>Enter amount and your name</li>
+                                        <li>Click <strong>"Pay Now"</strong></li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>Which payment methods are accepted?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ul>
+                                        <li><strong>GCash</strong> — Mobile wallet payment</li>
+                                        <li><strong>PayMaya</strong> — Digital wallet transaction</li>
+                                        <li><strong>Bank Transfer</strong> — Direct deposit</li>
+                                        <li><strong>Cash</strong> — In-person at designated offices</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Notifications -->
+                    <section id="notifications" class="help-section">
+                        <h2 class="section-title mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-bell text-tsu-gold text-lg"></i>Notifications
+                        </h2>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How do I view my notifications?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ul>
+                                        <li><strong>Quick Preview:</strong> Click the bell icon in the header for recent
+                                            notifications</li>
+                                        <li><strong>Full View:</strong> Click "See All Notifications" to view the
+                                            complete list</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>How do I mark notifications as read?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ul>
+                                        <li>Click <strong>"Mark All Read"</strong> in the notification panel</li>
+                                        <li>Click on individual notifications to view and auto-mark as read</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Troubleshooting -->
+                    <section id="troubleshooting" class="help-section">
+                        <h2 class="section-title mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-exclamation text-tsu-gold text-lg"></i>Troubleshooting
+                        </h2>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>I forgot my password. What should I do?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <p>Contact our support team using the methods in <strong>Contact Support</strong>.
+                                        Provide your registered email for identity verification, and a representative
+                                        will guide you through the password reset process.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>The platform is not loading correctly</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <ul>
+                                        <li>Refresh your browser (F5 or Ctrl+R)</li>
+                                        <li>Clear browser cache and cookies</li>
+                                        <li>Try a different browser (Chrome, Firefox, Edge)</li>
+                                        <li>Verify internet connection stability</li>
+                                        <li>Ensure JavaScript is enabled</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <button class="faq-toggle" onclick="toggleFAQ(this)">
+                                <span>My volunteer application status hasn't updated</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <div class="faq-answer">
+                                <div class="faq-answer-content">
+                                    <p>Applications undergo manual review (1-3 business days). You'll receive a
+                                        notification when your status changes. If more than 3 days have passed, contact
+                                        support.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Contact Support -->
+                    <section id="contact-support" class="help-section">
+                        <h2 class="section-title mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-headset text-tsu-gold text-lg"></i>Contact Support
+                        </h2>
+
+                        <div class="contact-grid">
+                            <div class="contact-card">
+                                <div class="contact-card-icon" style="background:#eff6ff;">
+                                    <i class="fa-solid fa-envelope text-blue-600 text-lg"></i>
+                                </div>
+                                <h4 style="font-weight:700;color:#1e293b;margin-bottom:0.25rem;">Email</h4>
+                                <a href="mailto:support@victoria.gov.ph"
+                                    style="color:#0A2947;font-weight:600;font-size:0.85rem;">support@victoria.gov.ph</a>
+                                <p style="font-size:0.75rem;color:#94a3b8;margin-top:0.25rem;">Response: 24-48 hours</p>
+                            </div>
+                            <div class="contact-card">
+                                <div class="contact-card-icon" style="background:#ecfdf5;">
+                                    <i class="fa-solid fa-phone text-emerald-600 text-lg"></i>
+                                </div>
+                                <h4 style="font-weight:700;color:#1e293b;margin-bottom:0.25rem;">Telephone</h4>
+                                <a href="tel:+63431234567"
+                                    style="color:#0A2947;font-weight:600;font-size:0.85rem;">(043) 123-4567</a>
+                                <p style="font-size:0.75rem;color:#94a3b8;margin-top:0.25rem;">Mon-Fri, 8AM-5PM</p>
+                            </div>
+                            <div class="contact-card">
+                                <div class="contact-card-icon" style="background:#f5f3ff;">
+                                    <i class="fa-solid fa-location-dot text-purple-600 text-lg"></i>
+                                </div>
+                                <h4 style="font-weight:700;color:#1e293b;margin-bottom:0.25rem;">In-Person</h4>
+                                <p style="color:#475569;font-size:0.85rem;">Municipal Hall, Victoria<br>Tarlac,
+                                    Philippines</p>
+                                <p style="font-size:0.75rem;color:#94a3b8;margin-top:0.25rem;">Mon-Fri, 8AM-5PM</p>
+                            </div>
+                        </div>
+
+                        <div
+                            style="background:linear-gradient(135deg,#0A2947,#1A5276);border-radius:16px;padding:2rem;text-align:center;color:white;margin-top:1rem;">
+                            <i class="fa-solid fa-circle-question text-3xl mb-3 text-tsu-gold"></i>
+                            <h3 style="font-size:1.25rem;font-weight:800;margin-bottom:0.5rem;">Still need assistance?
+                            </h3>
+                            <p style="color:#cbd5e1;font-size:0.9rem;margin-bottom:1.25rem;">Our support team is ready
+                                to help with any questions.</p>
+                            <a href="mailto:support@victoria.gov.ph"
+                                style="display:inline-flex;align-items:center;gap:0.5rem;background:#FFD700;color:#0A2947;font-weight:700;padding:10px 24px;border-radius:12px;text-decoration:none;font-size:0.9rem;transition:all 0.2s;">
+                                <i class="fa-solid fa-paper-plane text-xs"></i>
+                                Send Us a Message
+                            </a>
+                        </div>
+                    </section>
+
+                    <!-- Footer -->
+                    <div class="content-footer">
+                        <p>&copy; 2026 Municipality of Victoria. All rights reserved.</p>
+                        <div class="flex gap-4">
+                            <a href="privacy-policy.html" window.location.replace(this.href);>Privacy Policy</a>
+                            <a href="terms-of-service.html" window.location.replace(this.href);>Terms of Service</a>
+                            <span class="current">Help Center</span>
+                            <a href="feedback.html" window.location.replace(this.href);>Feedback</a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        // Sidebar toggle
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebar-overlay').classList.toggle('show');
+        }
+
+        function closeSidebarMobile() {
+            if (window.innerWidth <= 1024) {
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('sidebar-overlay').classList.remove('show');
+            }
+        }
+
+        // FAQ Toggle
+        function toggleFAQ(button) {
+            const answer = button.nextElementSibling;
+            const isExpanded = answer.classList.contains('expanded');
+            if (isExpanded) {
+                answer.classList.remove('expanded');
+                answer.style.maxHeight = '0';
+                button.classList.remove('expanded');
+            } else {
+                answer.classList.add('expanded');
+                answer.style.maxHeight = answer.scrollHeight + 'px';
+                button.classList.add('expanded');
+            }
+        }
+
+        // TOC Active State
+        const contentArea = document.getElementById('content-area');
+        const tocLinks = document.querySelectorAll('.toc-link');
+        const sections = document.querySelectorAll('.help-section');
+
+        function updateActiveTocLink() {
+            let current = '';
+            const scrollPos = contentArea.scrollTop + 120;
+            sections.forEach(s => {
+                if (scrollPos >= s.offsetTop && scrollPos < s.offsetTop + s.offsetHeight) {
+                    current = s.getAttribute('id');
+                }
+            });
+            tocLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) link.classList.add('active');
+            });
+        }
+
+        contentArea.addEventListener('scroll', updateActiveTocLink, { passive: true });
+
+        tocLinks.forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.getElementById(this.getAttribute('href').substring(1));
+                if (target) contentArea.scrollTo({ top: target.offsetTop - 40, behavior: 'smooth' });
+            });
+        });
+
+        // Search
+        const searchInput = document.getElementById('help-search');
+        const searchResults = document.getElementById('search-results');
+
+        const articles = [
+            { title: 'What is OneVictoria?', section: 'getting-started', keywords: ['onevictoria', 'platform', 'portal', 'about', 'what is'] },
+            { title: 'How do I create a new account?', section: 'getting-started', keywords: ['create', 'account', 'register', 'sign up', 'registration'] },
+            { title: 'How do I sign in?', section: 'getting-started', keywords: ['sign in', 'login', 'access', 'signin', 'log in'] },
+            { title: 'Dashboard Interface', section: 'getting-started', keywords: ['dashboard', 'navigation', 'menu', 'interface', 'sidebar'] },
+            { title: 'Update profile information', section: 'account-management', keywords: ['update', 'profile', 'edit', 'settings', 'change'] },
+            { title: 'Change password', section: 'account-management', keywords: ['password', 'change', 'reset', 'new'] },
+            { title: 'Register for an event', section: 'events-registration', keywords: ['register', 'event', 'join', 'sign up', 'registration'] },
+            { title: 'Cancel event registration', section: 'events-registration', keywords: ['cancel', 'unregister', 'remove', 'registration'] },
+            { title: 'Event status indicators', section: 'events-registration', keywords: ['status', 'registered', 'completed', 'cancelled'] },
+            { title: 'Submit volunteer application', section: 'volunteering', keywords: ['volunteer', 'apply', 'application', 'volunteering'] },
+            { title: 'Skill verification documents', section: 'volunteering', keywords: ['skill', 'verification', 'documents', 'certificate', 'upload'] },
+            { title: 'Service hours', section: 'service-hours', keywords: ['service', 'hours', 'earn', 'community', 'credit'] },
+            { title: 'Certification statuses', section: 'service-hours', keywords: ['certified', 'pending', 'status', 'certification'] },
+            { title: 'Make a donation', section: 'donations', keywords: ['donation', 'donate', 'contribute', 'giving'] },
+            { title: 'Payment methods', section: 'donations', keywords: ['payment', 'gcash', 'paymaya', 'bank', 'cash'] },
+            { title: 'View notifications', section: 'notifications', keywords: ['notifications', 'bell', 'alerts', 'view'] },
+            { title: 'Mark notifications read', section: 'notifications', keywords: ['mark', 'read', 'notification'] },
+            { title: 'Forgot password', section: 'troubleshooting', keywords: ['forgot', 'password', 'reset', 'cannot login'] },
+            { title: 'Platform not loading', section: 'troubleshooting', keywords: ['loading', 'error', 'browser', 'refresh', 'not working'] },
+            { title: 'Volunteer application status', section: 'troubleshooting', keywords: ['application', 'status', 'pending', 'no update'] },
+            { title: 'Contact support', section: 'contact-support', keywords: ['contact', 'support', 'help', 'email', 'phone'] },
+        ];
+
+        searchInput.addEventListener('input', function () {
+            const query = this.value.toLowerCase().trim();
+            if (query.length < 2) { searchResults.classList.add('hidden'); return; }
+            const matches = articles.filter(a => a.title.toLowerCase().includes(query) || a.keywords.some(k => k.includes(query)));
+            if (matches.length) {
+                searchResults.innerHTML = matches.map(m => `
+                    <a href="#${m.section}" class="block px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-sm" onclick="searchResults.classList.add('hidden');searchInput.value='';document.getElementById('${m.section}').scrollIntoView({behavior:'smooth'});">
+                        <p class="font-medium text-gray-800">${m.title.replace(new RegExp(`(${query})`, 'gi'), '<span class="search-highlight">$1</span>')}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">${m.section.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
+                    </a>
+                `).join('');
+                searchResults.classList.remove('hidden');
+            } else {
+                searchResults.innerHTML = `<div class="px-4 py-6 text-center"><i class="fa-solid fa-search text-gray-300 text-2xl mb-2"></i><p class="text-sm text-gray-500">No results for "${this.value}"</p></div>`;
+                searchResults.classList.remove('hidden');
+            }
+        });
+
+        document.addEventListener('click', e => { if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) searchResults.classList.add('hidden'); });
+        document.addEventListener('keydown', e => { if ((e.ctrlKey && e.key === 'k') || (e.key === '/' && document.activeElement === document.body)) { e.preventDefault(); searchInput.focus(); } if (e.key === 'Escape') { searchResults.classList.add('hidden'); searchInput.blur(); } });
+    </script>
+</body>
+
+</html>

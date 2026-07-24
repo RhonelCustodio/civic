@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="description"
+    content="OneVictoria Resident Hub Privacy Policy - How we collect, use, and protect your data.">
+  <title>Privacy Policy · OneVictoria Resident Hub</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            tsu: {
+              blue: '#0A2947',
+              blueLight: '#0D3B5C',
+              blueDark: '#061B2E',
+              gold: '#FFD700',
+              goldLight: '#FFE44D',
+              goldDark: '#CCAC00',
+              dark: '#2B0000',
+              light: '#E8F0FE',
+              accent: '#1A5276',
+              muted: '#94A3B8',
+            },
+            surface: {
+              DEFAULT: '#FFFFFF',
+              alt: '#F8FAFC',
+              hover: '#F1F5F9',
+              border: '#E2E8F0',
+            },
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..800&display=swap" rel="stylesheet">
+  <link rel="shortcut icon" href="gemini-svg%20(1).svg" type="image/x-icon">
+  <style>
+    * {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Main container card */
+    .policy-container {
+      background: white;
+      border-radius: 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 20px 50px rgba(10, 41, 71, 0.06);
+      overflow: hidden;
+    }
+
+    /* Header section with gradient */
+    .policy-header {
+      background: linear-gradient(135deg, #0A2947 0%, #0D3B5C 40%, #1A5276 100%);
+      padding: 3rem 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .policy-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255, 215, 0, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .policy-header::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255, 215, 0, 0.05) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .policy-body {
+      padding: 2.5rem;
+    }
+
+    /* Section styling */
+    .policy-section {
+      margin-bottom: 2.5rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid #f1f5f9;
+      transition: all 0.2s ease;
+    }
+
+    .policy-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .policy-section:hover {
+      background: #f8fafc;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-left: -1.5rem;
+      margin-right: -1.5rem;
+    }
+
+    .section-number {
+      background: linear-gradient(135deg, #0A2947, #1A5276);
+      color: #FFD700;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(10, 41, 71, 0.2);
+    }
+
+    .section-title {
+      color: #0A2947;
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.3px;
+      line-height: 1.4;
+    }
+
+    .section-icon {
+      color: #FFD700;
+      background: rgba(10, 41, 71, 0.06);
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Custom list styling */
+    .policy-list {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .policy-list li {
+      position: relative;
+      padding-left: 2rem;
+      margin-bottom: 0.75rem;
+      color: #334155;
+      line-height: 1.7;
+      font-size: 0.95rem;
+    }
+
+    .policy-list li::before {
+      content: '';
+      position: absolute;
+      left: 0.25rem;
+      top: 0.6rem;
+      width: 8px;
+      height: 8px;
+      background: #FFD700;
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+    }
+
+    .policy-list li strong {
+      color: #0A2947;
+      font-weight: 600;
+    }
+
+    /* Contact card */
+    .contact-card {
+      background: linear-gradient(135deg, #E8F0FE 0%, #f0f4ff 100%);
+      border: 1px solid rgba(10, 41, 71, 0.1);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .contact-card .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      color: #334155;
+      font-size: 0.95rem;
+    }
+
+    .contact-card .contact-icon {
+      width: 36px;
+      height: 36px;
+      background: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0A2947;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      flex-shrink: 0;
+    }
+
+    /* Back button */
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: white;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .btn-back:hover {
+      border-color: #0A2947;
+      color: #0A2947;
+      background: #f8fafc;
+      box-shadow: 0 4px 12px rgba(10, 41, 71, 0.1);
+      transform: translateY(-1px);
+    }
+
+    /* Footer */
+    .page-footer {
+      background: white;
+      border-top: 1px solid #e2e8f0;
+      padding: 1.5rem 2rem;
+      margin-top: auto;
+    }
+
+    /* Highlight box */
+    .highlight-box {
+      background: #fffbeb;
+      border-left: 4px solid #FFD700;
+      padding: 1rem 1.25rem;
+      border-radius: 0 12px 12px 0;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      color: #92400e;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .policy-header {
+        padding: 2rem 1.5rem;
+      }
+
+      .policy-body {
+        padding: 1.5rem;
+      }
+
+      .section-number,
+      .section-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+      }
+
+      .section-title {
+        font-size: 1.1rem;
+      }
+
+      .policy-section:hover {
+        padding: 1rem;
+        margin-left: -1rem;
+        margin-right: -1rem;
+      }
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background: white;
+      }
+
+      .policy-header {
+        background: white !important;
+        color: #0A2947 !important;
+        border-bottom: 2px solid #0A2947;
+      }
+
+      .policy-header * {
+        color: #0A2947 !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="antialiased text-gray-800 flex flex-col min-h-screen">
+
+  <!-- Main Content -->
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10 w-full flex-grow">
+
+    <!-- Top Navigation -->
+    <div class="flex items-center justify-between mb-6">
+      <a href="index.html" window.location.replace(this.href); class="btn-back">
+        <i class="fa-solid fa-arrow-left text-xs"></i>
+        Back to Homepage
+      </a>
+      <div class="flex items-center gap-2 text-sm text-gray-400">
+        <i class="fa-solid fa-file-contract text-xs"></i>
+        <span>Legal Document</span>
+      </div>
+    </div>
+
+    <!-- Privacy Policy Container -->
+    <div class="policy-container">
+
+      <!-- Header -->
+      <div class="policy-header text-white relative z-10">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-14 h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+            <i class="fa-solid fa-shield-halved text-tsu-gold text-2xl"></i>
+          </div>
+          <div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Privacy Policy</h1>
+            <p class="text-gray-300 text-sm mt-1">OneVictoria Resident Hub</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-sm text-gray-300 mt-4">
+          <span class="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
+            <i class="fa-regular fa-calendar-check text-tsu-gold text-xs"></i>
+            Effective: January 1, 2026
+          </span>
+          <span class="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
+            <i class="fa-solid fa-rotate text-tsu-gold text-xs"></i>
+            Last Updated: July 22, 2026
+          </span>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="policy-body">
+
+        <!-- Introduction -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">1</span>
+            <div>
+              <h2 class="section-title">Introduction & Scope</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Your privacy matters to us</p>
+            </div>
+          </div>
+          <div class="ml-[56px] space-y-3 text-gray-600 leading-relaxed">
+            <p>
+              Welcome to <strong>OneVictoria</strong>, the official digital Resident Hub of the
+              <strong>Municipality of Victoria, Tarlac</strong>. We are committed to protecting
+              your personal data and respecting your privacy rights.
+            </p>
+            <p>
+              This Privacy Policy explains in clear, transparent terms how we collect, use, disclose,
+              and safeguard your information when you interact with our platform — including account
+              registration, event participation, volunteer applications, and donation transactions.
+            </p>
+            <div class="highlight-box">
+              <i class="fa-solid fa-gavel mr-2 text-amber-600"></i>
+              <strong>Legal Basis:</strong> We comply with the
+              <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong> of the Philippines,
+              its implementing rules and regulations, and all relevant local ordinances of Victoria, Tarlac.
+            </div>
+            <p>
+              By accessing or using OneVictoria, you acknowledge that you have read, understood,
+              and agreed to the terms of this Privacy Policy.
+            </p>
+          </div>
+        </div>
+
+        <!-- Information We Collect -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">2</span>
+            <div>
+              <h2 class="section-title">Information We Collect</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Transparent data collection</p>
+            </div>
+          </div>
+          <div class="ml-[56px]">
+            <p class="text-gray-600 mb-4">We collect only information that is necessary to provide and improve our
+              municipal services. Below are the categories of data we may process:</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div class="flex items-center gap-2 mb-2">
+                  <i class="fa-solid fa-id-card text-tsu-blue text-sm"></i>
+                  <strong class="text-sm text-tsu-blue">Personal Identification</strong>
+                </div>
+                <p class="text-xs text-gray-500">Full name, email address, mobile number, age, gender, and residential
+                  address provided during account creation or profile updates.</p>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div class="flex items-center gap-2 mb-2">
+                  <i class="fa-solid fa-hand-holding-heart text-tsu-blue text-sm"></i>
+                  <strong class="text-sm text-tsu-blue">Service-Related Data</strong>
+                </div>
+                <p class="text-xs text-gray-500">Volunteer skills, availability, uploaded documents, service hours
+                  records, and event registration details.</p>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div class="flex items-center gap-2 mb-2">
+                  <i class="fa-solid fa-peso-sign text-tsu-blue text-sm"></i>
+                  <strong class="text-sm text-tsu-blue">Donation Records</strong>
+                </div>
+                <p class="text-xs text-gray-500">Donation amount, purpose, payment method reference (GCash, PayMaya,
+                  bank transfer), and donor identification.</p>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div class="flex items-center gap-2 mb-2">
+                  <i class="fa-solid fa-laptop-code text-tsu-blue text-sm"></i>
+                  <strong class="text-sm text-tsu-blue">Technical & Usage Data</strong>
+                </div>
+                <p class="text-xs text-gray-500">IP address, browser type, device information, operating system, and
+                  platform interaction logs for security and analytics.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- How We Use Information -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">3</span>
+            <div>
+              <h2 class="section-title">How We Use Your Information</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Purpose-driven processing</p>
+            </div>
+          </div>
+          <div class="ml-[56px]">
+            <p class="text-gray-600 mb-4">Your data is processed strictly for legitimate municipal purposes and to
+              enhance community services:</p>
+            <ul class="policy-list">
+              <li><strong>Account Management</strong> — Create and manage your resident account, verify your identity,
+                and provide secure access to the Resident Hub.</li>
+              <li><strong>Community Services</strong> — Process event registrations, volunteer applications, and
+                accurately track community service hours.</li>
+              <li><strong>Donation Processing</strong> — Facilitate donations, generate official receipts, and maintain
+                transparent public donation logs (donor names displayed only with explicit consent).</li>
+              <li><strong>Important Notifications</strong> — Send critical updates regarding your activities, municipal
+                announcements, emergency alerts, and policy changes.</li>
+              <li><strong>Platform Improvement</strong> — Debug technical issues, analyze aggregated usage trends, and
+                enhance platform security for better municipal planning.</li>
+              <li><strong>Legal Compliance</strong> — Comply with legal obligations and respond to lawful requests from
+                authorized government authorities.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Data Sharing -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">4</span>
+            <div>
+              <h2 class="section-title">Data Sharing & Disclosure</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">We never sell your data</p>
+            </div>
+          </div>
+          <div class="ml-[56px]">
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 flex items-start gap-3">
+              <i class="fa-solid fa-check-circle text-emerald-600 text-lg mt-0.5"></i>
+              <p class="text-sm text-emerald-800"><strong>We do not sell, rent, or trade your personal
+                  information</strong> to any third party for commercial purposes. Data sharing is limited to the
+                following circumstances:</p>
+            </div>
+            <ul class="policy-list">
+              <li><strong>Municipal Departments</strong> — Authorized personnel from the Mayor's Office, Social Welfare,
+                Disaster Risk Reduction, and other relevant local government units to coordinate community programs
+                effectively.</li>
+              <li><strong>Service Providers</strong> — Trusted third-party vendors (e.g., cloud hosting, payment
+                gateways) who are contractually bound to protect your data and use it solely for designated municipal
+                services.</li>
+              <li><strong>Legal Compliance</strong> — When required by law, court order, or to protect the rights,
+                property, or safety of the Municipality of Victoria, its residents, or the public.</li>
+              <li><strong>Public Acknowledgment</strong> — With your <strong>explicit consent</strong>, your name and
+                donation details may appear in public gratitude lists. Otherwise, all donations remain anonymous by
+                default.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Data Security -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">5</span>
+            <div>
+              <h2 class="section-title">Data Security Measures</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Protecting what matters</p>
+            </div>
+          </div>
+          <div class="ml-[56px] space-y-3 text-gray-600 leading-relaxed">
+            <p>
+              We implement robust <strong>administrative, technical, and physical safeguards</strong>
+              to protect your personal information against unauthorized access, alteration, disclosure,
+              or destruction. Our security framework includes:
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <div class="text-center bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <i class="fa-solid fa-lock text-tsu-blue text-2xl mb-2"></i>
+                <p class="text-xs font-semibold text-tsu-blue">Encryption</p>
+                <p class="text-[11px] text-gray-500 mt-1">SSL/TLS encryption for all data in transit</p>
+              </div>
+              <div class="text-center bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <i class="fa-solid fa-server text-tsu-blue text-2xl mb-2"></i>
+                <p class="text-xs font-semibold text-tsu-blue">Secure Infrastructure</p>
+                <p class="text-[11px] text-gray-500 mt-1">Protected servers with access controls</p>
+              </div>
+              <div class="text-center bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <i class="fa-solid fa-magnifying-glass-chart text-tsu-blue text-2xl mb-2"></i>
+                <p class="text-xs font-semibold text-tsu-blue">Regular Audits</p>
+                <p class="text-[11px] text-gray-500 mt-1">Continuous security monitoring & updates</p>
+              </div>
+            </div>
+            <p class="text-sm text-amber-700 bg-amber-50 rounded-xl p-4 border border-amber-200 mt-4">
+              <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+              <strong>Important:</strong> Despite our best efforts, no method of electronic storage is 100% secure.
+              We continuously update our practices to align with industry standards and government regulations.
+            </p>
+          </div>
+        </div>
+
+        <!-- Data Retention -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">6</span>
+            <div>
+              <h2 class="section-title">Data Retention Policy</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Keeping data only as needed</p>
+            </div>
+          </div>
+          <div class="ml-[56px] space-y-3 text-gray-600 leading-relaxed">
+            <p>
+              We retain your personal information only for as long as necessary to fulfill the purposes
+              outlined in this policy, or as required by Philippine law.
+            </p>
+            <ul class="policy-list">
+              <li><strong>Active Accounts:</strong> Data is retained while your resident profile remains active on the
+                platform.</li>
+              <li><strong>Account Deactivation:</strong> Upon your request for account deactivation or data deletion, we
+                will securely dispose of your data within a reasonable timeframe (typically 30-60 days).</li>
+              <li><strong>Legal Requirements:</strong> Certain records may be retained for extended periods when
+                mandated for legal, auditing, tax, or archival public interest purposes as required by Philippine law.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Your Rights -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">7</span>
+            <div>
+              <h2 class="section-title">Your Data Privacy Rights</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">You are in control</p>
+            </div>
+          </div>
+          <div class="ml-[56px]">
+            <p class="text-gray-600 mb-4">Under the Data Privacy Act of 2012, you are entitled to the following rights
+              regarding your personal data:</p>
+            <div class="space-y-2">
+              <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <i class="fa-solid fa-circle-info text-tsu-gold text-sm mt-0.5"></i>
+                <div><strong class="text-sm text-tsu-blue">Right to be Informed</strong>
+                  <p class="text-xs text-gray-500 mt-0.5">Know how your personal data is being processed.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <i class="fa-solid fa-eye text-tsu-gold text-sm mt-0.5"></i>
+                <div><strong class="text-sm text-tsu-blue">Right to Access</strong>
+                  <p class="text-xs text-gray-500 mt-0.5">Request a copy of your personal data we hold.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <i class="fa-solid fa-pen-to-square text-tsu-gold text-sm mt-0.5"></i>
+                <div><strong class="text-sm text-tsu-blue">Right to Rectification</strong>
+                  <p class="text-xs text-gray-500 mt-0.5">Correct any inaccurate or incomplete data.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <i class="fa-solid fa-ban text-tsu-gold text-sm mt-0.5"></i>
+                <div><strong class="text-sm text-tsu-blue">Right to Object</strong>
+                  <p class="text-xs text-gray-500 mt-0.5">Withdraw consent for specific uses of your data.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <i class="fa-solid fa-trash-can text-tsu-gold text-sm mt-0.5"></i>
+                <div><strong class="text-sm text-tsu-blue">Right to Erasure or Blocking</strong>
+                  <p class="text-xs text-gray-500 mt-0.5">Request deletion of your data under certain conditions.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                <i class="fa-solid fa-file-pen text-tsu-gold text-sm mt-0.5"></i>
+                <div><strong class="text-sm text-tsu-blue">Right to File a Complaint</strong>
+                  <p class="text-xs text-gray-500 mt-0.5">Lodge a complaint with the National Privacy Commission (NPC).
+                  </p>
+                </div>
+              </div>
+            </div>
+            <p class="text-sm text-gray-500 mt-4">
+              To exercise any of these rights, please contact our Data Protection Officer using the details
+              in Section 9. We will respond to your request within the period prescribed by law.
+            </p>
+          </div>
+        </div>
+
+        <!-- Cookies -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">8</span>
+            <div>
+              <h2 class="section-title">Cookies & Tracking Technologies</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Minimal & essential only</p>
+            </div>
+          </div>
+          <div class="ml-[56px] space-y-3 text-gray-600 leading-relaxed">
+            <p>
+              OneVictoria uses <strong>essential cookies and similar technologies</strong> to maintain
+              session integrity, remember your preferences, and enhance your user experience.
+            </p>
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+              <i class="fa-solid fa-cookie-bite text-blue-600 text-lg mt-0.5"></i>
+              <div>
+                <p class="text-sm text-blue-800"><strong>What we DON'T do:</strong></p>
+                <ul class="text-xs text-blue-700 mt-1 space-y-1">
+                  <li>• We do not use third-party advertising cookies</li>
+                  <li>• We do not track you across other websites</li>
+                  <li>• We do not sell your browsing data</li>
+                </ul>
+              </div>
+            </div>
+            <p class="text-sm">
+              You can control cookie settings through your browser preferences. However, disabling essential
+              cookies may affect the functionality of the Resident Hub platform.
+            </p>
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">9</span>
+            <div>
+              <h2 class="section-title">Contact Information</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">We're here to help</p>
+            </div>
+          </div>
+          <div class="ml-[56px]">
+            <p class="text-gray-600 mb-4">
+              For questions, concerns, or to exercise your data privacy rights, please contact our
+              designated <strong>Data Protection Officer (DPO)</strong>:
+            </p>
+            <div class="contact-card">
+              <p class="font-bold text-tsu-blue text-lg flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-user-tie text-tsu-accent"></i>
+                Municipality of Victoria – Data Protection Officer
+              </p>
+              <div class="space-y-3">
+                <div class="contact-item">
+                  <div class="contact-icon"><i class="fa-solid fa-map-pin text-sm"></i></div>
+                  <span>Municipal Hall, Victoria, Tarlac, Philippines 2313</span>
+                </div>
+                <div class="contact-item">
+                  <div class="contact-icon"><i class="fa-solid fa-envelope text-sm"></i></div>
+                  <span>dpo@victoria.gov.ph</span>
+                </div>
+                <div class="contact-item">
+                  <div class="contact-icon"><i class="fa-solid fa-phone text-sm"></i></div>
+                  <span>(045) 123-4567 local 102</span>
+                </div>
+                <div class="contact-item">
+                  <div class="contact-icon"><i class="fa-solid fa-clock text-sm"></i></div>
+                  <span>Monday – Friday, 8:00 AM – 5:00 PM (Philippine Standard Time)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Changes -->
+        <div class="policy-section">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="section-number">10</span>
+            <div>
+              <h2 class="section-title">Changes to This Policy</h2>
+              <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Staying current</p>
+            </div>
+          </div>
+          <div class="ml-[56px] space-y-3 text-gray-600 leading-relaxed">
+            <p>
+              We may update this Privacy Policy periodically to reflect changes in our practices,
+              technology, or legal requirements. When we make changes, we will:
+            </p>
+            <ul class="policy-list">
+              <li>Notify all registered residents through the <strong>OneVictoria notification system</strong></li>
+              <li>Post the revised version with a <strong>new effective date</strong> prominently on the platform</li>
+              <li>Provide a summary of material changes where applicable</li>
+            </ul>
+            <p>
+              Your continued use of the OneVictoria platform after changes take effect constitutes
+              your acceptance of the updated Privacy Policy. We encourage you to review this page
+              periodically for the latest information on our privacy practices.
+            </p>
+          </div>
+        </div>
+
+        <!-- Trust Badge -->
+        <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+          <div class="inline-flex items-center gap-2 bg-gray-50 rounded-full px-5 py-2.5">
+            <i class="fa-solid fa-shield-check text-tsu-blue"></i>
+            <span class="text-sm text-gray-600 font-medium">Your trust is the foundation of our community</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-3 px-2">
+      <p>&copy; 2026 Municipality of Victoria. All rights reserved.</p>
+      <div class="flex space-x-5 font-medium">
+        <span class="text-tsu-blue font-semibold">Privacy Policy</span>
+        <a href="terms-of-service.html" window.locatio.replace(this.href); class="hover:text-tsu-blue transition-colors">Terms of Service</a>
+        <a href="help-center.html" window.locatio.replace(this.href); class="hover:text-tsu-blue transition-colors">Help Center</a>
+        <a href="contact.html" window.locatio.replace(this.href); class="hover:text-tsu-blue transition-colors">Feedback</a>
+      </div>
+    </footer>
+
+  </div>
+</body>
+
+</html>

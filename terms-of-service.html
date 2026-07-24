@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="description"
+        content="OneVictoria Resident Hub Terms of Service - Rules and guidelines for using the platform.">
+    <title>Terms of Service · OneVictoria Resident Hub</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        tsu: {
+                            blue: '#0A2947', blueLight: '#0D3B5C', blueDark: '#061B2E',
+                            gold: '#FFD700', goldLight: '#FFE44D', goldDark: '#CCAC00',
+                            dark: '#2B0000', light: '#E8F0FE', accent: '#1A5276', muted: '#94A3B8',
+                        },
+                        surface: { DEFAULT: '#FFFFFF', alt: '#F8FAFC', hover: '#F1F5F9', border: '#E2E8F0' },
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..800&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="gemini-svg%20(1).svg" type="image/x-icon">
+    <style>
+        * {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ===== FIXED SIDEBAR ===== */
+        .sidebar {
+            width: 300px;
+            min-width: 300px;
+            height: 100vh;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.04);
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            flex-shrink: 0;
+        }
+
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .sidebar-logo .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #0A2947, #1A5276);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(10, 41, 71, 0.2);
+        }
+
+        .sidebar-logo h2 {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0A2947;
+            letter-spacing: -0.3px;
+        }
+
+        .sidebar-logo span {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 0.75rem;
+            overscroll-behavior: contain;
+        }
+
+        .sidebar-nav-title {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 0.5rem 0.75rem 0.75rem;
+        }
+
+        .toc-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 1rem;
+            border-radius: 10px;
+            font-size: 0.8125rem;
+            color: #64748b;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            margin-bottom: 2px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .toc-link:hover {
+            background: #f8fafc;
+            color: #0A2947;
+        }
+
+        .toc-link.active {
+            background: #E8F0FE;
+            color: #0A2947;
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 #0A2947;
+            border-radius: 10px;
+        }
+
+        .toc-number {
+            width: 26px;
+            height: 26px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #94a3b8;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .toc-link.active .toc-number {
+            background: #0A2947;
+            color: #FFD700;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid #f1f5f9;
+            flex-shrink: 0;
+        }
+
+        .btn-back {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            text-align: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn-back:hover {
+            border-color: #0A2947;
+            color: #0A2947;
+            background: #f1f5f9;
+            box-shadow: 0 4px 12px rgba(10, 41, 71, 0.1);
+        }
+
+        /* ===== SCROLLABLE CONTENT AREA ===== */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            height: 100vh;
+            padding: 2rem 2.5rem;
+        }
+
+        .terms-container {
+            background: white;
+            border-radius: 24px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 20px 50px rgba(10, 41, 71, 0.06);
+            overflow: hidden;
+            max-width: 900px;
+        }
+
+        .terms-header {
+            background: linear-gradient(135deg, #0A2947 0%, #0D3B5C 40%, #1A5276 100%);
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .terms-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .terms-header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.05) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .terms-body {
+            padding: 2.5rem;
+        }
+
+        /* Section styling */
+        .terms-section {
+            margin-bottom: 2.5rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: all 0.2s ease;
+        }
+
+        .terms-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .terms-section:hover {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-left: -1.5rem;
+            margin-right: -1.5rem;
+        }
+
+        .section-number {
+            background: linear-gradient(135deg, #0A2947, #1A5276);
+            color: #FFD700;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(10, 41, 71, 0.2);
+        }
+
+        .section-title {
+            color: #0A2947;
+            font-weight: 700;
+            font-size: 1.25rem;
+            letter-spacing: -0.3px;
+            line-height: 1.4;
+        }
+
+        .legal-text {
+            color: #374151;
+            line-height: 1.8;
+        }
+
+        .legal-text p {
+            margin-bottom: 1rem;
+        }
+
+        .legal-text strong {
+            color: #0A2947;
+            font-weight: 600;
+        }
+
+        .legal-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .legal-list li {
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 0.75rem;
+            color: #334155;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        .legal-list li::before {
+            content: '';
+            position: absolute;
+            left: 0.25rem;
+            top: 0.6rem;
+            width: 8px;
+            height: 8px;
+            background: #FFD700;
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+        }
+
+        .info-card {
+            background: #E8F0FE;
+            border: 1px solid rgba(10, 41, 71, 0.1);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin: 1rem 0;
+        }
+
+        .highlight-box {
+            background: #fffbeb;
+            border-left: 4px solid #FFD700;
+            padding: 1rem 1.25rem;
+            border-radius: 0 12px 12px 0;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: #92400e;
+        }
+
+        .danger-box {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 1rem 1.25rem;
+            border-radius: 0 12px 12px 0;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: #991b1b;
+        }
+
+        .contact-grid-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 1.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .contact-grid-item:hover {
+            border-color: #0A2947;
+            box-shadow: 0 4px 16px rgba(10, 41, 71, 0.06);
+        }
+
+        .content-footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            gap: 0.75rem;
+        }
+
+        .content-footer a {
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .content-footer a:hover {
+            color: #0A2947;
+        }
+
+        .content-footer .current {
+            color: #0A2947;
+            font-weight: 600;
+        }
+
+        /* Mobile hamburger for sidebar toggle */
+        .mobile-sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 50;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                left: -300px;
+                top: 0;
+                bottom: 0;
+                z-index: 40;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.4);
+                z-index: 39;
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+
+            .mobile-sidebar-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+            }
+
+            .content-area {
+                padding: 1rem;
+            }
+
+            .terms-header {
+                padding: 1.5rem;
+            }
+
+            .terms-body {
+                padding: 1.5rem;
+            }
+
+            .section-number {
+                width: 32px;
+                height: 32px;
+                font-size: 0.85rem;
+            }
+
+            .section-title {
+                font-size: 1.1rem;
+            }
+
+            .terms-section:hover {
+                padding: 1rem;
+                margin-left: -1rem;
+                margin-right: -1rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .content-area {
+                padding: 0.5rem;
+            }
+        }
+
+        @media print {
+            body {
+                overflow: auto;
+                background: white;
+            }
+
+            .sidebar,
+            .mobile-sidebar-toggle,
+            .sidebar-overlay {
+                display: none !important;
+            }
+
+            .content-area {
+                overflow: visible;
+                height: auto;
+                padding: 0;
+            }
+
+            .terms-container {
+                box-shadow: none;
+                border: none;
+            }
+
+            .terms-header {
+                background: white !important;
+                color: #0A2947 !important;
+                border-bottom: 2px solid #0A2947;
+            }
+
+            .terms-header * {
+                color: #0A2947 !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="antialiased text-gray-800">
+
+    <!-- Mobile Sidebar Toggle -->
+    <button class="mobile-sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation">
+        <i class="fa-solid fa-bars text-xl text-gray-600"></i>
+    </button>
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main App Layout -->
+    <div class="app-layout">
+
+        <!-- ===== FIXED SIDEBAR ===== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <div class="logo-icon">
+                        <i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i>
+                    </div>
+                    <div>
+                        <h2>OneVictoria</h2>
+                        <span>Terms of Service</span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <p class="sidebar-nav-title">Table of Contents</p>
+
+                <a href="#acceptance" class="toc-link active" onclick="closeSidebarMobile()">
+                    <span class="toc-number">1</span>
+                    <span>Acceptance of Terms</span>
+                </a>
+                <a href="#eligibility" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">2</span>
+                    <span>Eligibility</span>
+                </a>
+                <a href="#account" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">3</span>
+                    <span>Account Registration</span>
+                </a>
+                <a href="#user-conduct" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">4</span>
+                    <span>User Conduct</span>
+                </a>
+                <a href="#privacy" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">5</span>
+                    <span>Privacy & Data</span>
+                </a>
+                <a href="#intellectual-property" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">6</span>
+                    <span>Intellectual Property</span>
+                </a>
+                <a href="#events" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">7</span>
+                    <span>Events & Registration</span>
+                </a>
+                <a href="#volunteering" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">8</span>
+                    <span>Volunteer Terms</span>
+                </a>
+                <a href="#donations" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">9</span>
+                    <span>Donations & Payments</span>
+                </a>
+                <a href="#termination" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">10</span>
+                    <span>Termination</span>
+                </a>
+                <a href="#disclaimers" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">11</span>
+                    <span>Disclaimers</span>
+                </a>
+                <a href="#limitation" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">12</span>
+                    <span>Limitation of Liability</span>
+                </a>
+                <a href="#changes" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">13</span>
+                    <span>Changes to Terms</span>
+                </a>
+                <a href="#governing-law" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">14</span>
+                    <span>Governing Law</span>
+                </a>
+                <a href="#contact" class="toc-link" onclick="closeSidebarMobile()">
+                    <span class="toc-number">15</span>
+                    <span>Contact Information</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="index.html" window.location.replace(this.href); class="btn-back">
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                    Back to Homepage
+                </a>
+            </div>
+        </aside>
+
+        <!-- ===== SCROLLABLE CONTENT AREA ===== -->
+        <main class="content-area" id="content-area">
+            <div class="terms-container">
+
+                <!-- Header -->
+                <div class="terms-header text-white relative z-10">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div
+                            class="w-14 h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fa-solid fa-file-contract text-tsu-gold text-2xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Terms of Service</h1>
+                            <p class="text-gray-300 text-sm mt-1">OneVictoria Resident Hub</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 text-sm text-gray-300 mt-4">
+                        <span class="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
+                            <i class="fa-regular fa-calendar-check text-tsu-gold text-xs"></i>
+                            Last Updated: July 22, 2026
+                        </span>
+                    </div>
+                    <p class="mt-4 text-gray-400 text-sm max-w-2xl">
+                        Please read these Terms of Service carefully. By accessing or using our services,
+                        you agree to be bound by these terms.
+                    </p>
+                </div>
+
+                <!-- Terms Content -->
+                <div class="terms-body legal-text">
+
+                    <section id="acceptance" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">1</span>
+                            <div>
+                                <h2 class="section-title">Acceptance of Terms</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Legally
+                                    binding agreement</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p>By accessing or using the OneVictoria Resident Hub platform, operated by the
+                                <strong>Municipality of Victoria</strong>, you acknowledge that you have read,
+                                understood, and agree to be bound by these Terms of Service.</p>
+                            <div class="danger-box">
+                                <i class="fa-solid fa-triangle-exclamation mr-2 text-red-600"></i>
+                                <strong>Important:</strong> If you do not agree to these Terms, you are expressly
+                                prohibited from using the Platform.
+                            </div>
+                            <p>These Terms constitute a legally binding agreement. Your continued use following
+                                modifications constitutes acceptance of changes.</p>
+                        </div>
+                    </section>
+
+                    <section id="eligibility" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">2</span>
+                            <div>
+                                <h2 class="section-title">Eligibility Requirements</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Who can use
+                                    the platform</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px]">
+                            <p>To access and use the Platform, you must meet the following criteria:</p>
+                            <ul class="legal-list mt-3">
+                                <li><strong>Age Requirement:</strong> At least <strong>fifteen (15) years of
+                                        age</strong>. Users under eighteen (18) must have parental consent.</li>
+                                <li><strong>Residency:</strong> <strong>Resident of Victoria</strong> or have a
+                                    legitimate connection to the municipality.</li>
+                                <li><strong>Truthful Information:</strong> Provide <strong>accurate, complete, and
+                                        truthful</strong> information.</li>
+                                <li><strong>Good Standing:</strong> Not previously suspended or removed for violations.
+                                </li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section id="account" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">3</span>
+                            <div>
+                                <h2 class="section-title">Account Registration & Security</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Your digital
+                                    identity</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p><strong>3.1 Account Creation.</strong> You agree to provide accurate, current, and
+                                complete information and to maintain and update your account details.</p>
+                            <p><strong>3.2 Credential Security.</strong> You are solely responsible for maintaining
+                                confidentiality of your credentials and for all activities under your account.</p>
+                            <div class="highlight-box">
+                                <i class="fa-solid fa-key mr-2 text-amber-600"></i>
+                                <strong>Security Tip:</strong> Use a strong, unique password and never share your login
+                                credentials.
+                            </div>
+                            <p><strong>3.3 Single Account Policy.</strong> Only <strong>one (1) account</strong> per
+                                individual. Multiple accounts are strictly prohibited.</p>
+                            <p><strong>3.4 Verification.</strong> The Municipality reserves the right to verify
+                                registration information at any time.</p>
+                        </div>
+                    </section>
+
+                    <section id="user-conduct" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">4</span>
+                            <div>
+                                <h2 class="section-title">User Conduct & Prohibited Activities</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Rules of
+                                    engagement</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px]">
+                            <p>By using the Platform, you agree to conduct yourself lawfully. The following are
+                                <strong>expressly prohibited</strong>:</p>
+                            <ul class="legal-list mt-3">
+                                <li>Providing false, misleading, or fraudulent information</li>
+                                <li>Impersonating any person or entity</li>
+                                <li>Using the Platform for any illegal purpose</li>
+                                <li>Uploading unlawful, defamatory, or obscene content</li>
+                                <li>Interfering with or disrupting Platform operations</li>
+                                <li>Attempting unauthorized access to Platform systems</li>
+                                <li>Using automated scripts, bots, or scraping tools</li>
+                                <li>Uploading viruses or malicious code</li>
+                                <li>Harvesting personal information without authorization</li>
+                                <li>Sending unsolicited communications or spam</li>
+                            </ul>
+                            <div class="danger-box mt-3">
+                                <i class="fa-solid fa-gavel mr-2 text-red-600"></i>
+                                <strong>Consequences:</strong> Violations may result in immediate termination and
+                                referral to law enforcement.
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="privacy" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">5</span>
+                            <div>
+                                <h2 class="section-title">Privacy & Data Protection</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Your data,
+                                    your rights</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p>Your privacy is of utmost importance. The collection and use of your information are
+                                governed by our <strong>Privacy Policy</strong>, incorporated by reference.</p>
+                            <p>The Municipality complies with the <strong>Data Privacy Act of 2012 (RA 10173)</strong>
+                                and implements reasonable safeguards.</p>
+                            <div class="info-card">
+                                <i class="fa-solid fa-shield-halved mr-2 text-tsu-blue"></i>
+                                <strong>Your Rights:</strong> You retain ownership of your personal information. By
+                                using the Platform, you grant a limited license for data processing.
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="intellectual-property" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">6</span>
+                            <div>
+                                <h2 class="section-title">Intellectual Property Rights</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Ownership &
+                                    usage</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p><strong>6.1 Platform Content.</strong> All content and functionality are the exclusive
+                                property of the Municipality, protected by intellectual property laws.</p>
+                            <p><strong>6.2 Limited License.</strong> You receive a limited, non-exclusive,
+                                non-transferable, revocable license for personal, non-commercial use.</p>
+                            <p><strong>6.3 Trademarks.</strong> "OneVictoria" and related marks are Municipality
+                                trademarks. Use requires prior written permission.</p>
+                            <p><strong>6.4 User Content.</strong> You retain ownership. By submitting content, you grant
+                                the Municipality a royalty-free license for Platform operations.</p>
+                        </div>
+                    </section>
+
+                    <section id="events" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">7</span>
+                            <div>
+                                <h2 class="section-title">Events & Registration</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Community
+                                    participation</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p><strong>7.1 Registration.</strong> By registering, you agree to attend at the specified
+                                date, time, and location.</p>
+                            <p><strong>7.2 Cancellation.</strong> Cancel at least 24 hours before. Repeated no-shows may
+                                restrict future registrations.</p>
+                            <p><strong>7.3 Modifications.</strong> The Municipality may modify or cancel events.
+                                Participants will be notified.</p>
+                            <p><strong>7.4 Conduct.</strong> Respectful and orderly conduct is expected at all events.
+                            </p>
+                        </div>
+                    </section>
+
+                    <section id="volunteering" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">8</span>
+                            <div>
+                                <h2 class="section-title">Volunteer Terms</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Service to
+                                    community</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p><strong>8.1 Application.</strong> Submission does not guarantee acceptance. All
+                                applications are subject to review.</p>
+                            <p><strong>8.2 Verification.</strong> Provide truthful information. Falsified credentials
+                                may result in disqualification.</p>
+                            <p><strong>8.3 Commitment.</strong> Accepted volunteers must fulfill responsibilities with
+                                diligence.</p>
+                            <p><strong>8.4 No Employment.</strong> Volunteering does not create an employment
+                                relationship.</p>
+                        </div>
+                    </section>
+
+                    <section id="donations" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">9</span>
+                            <div>
+                                <h2 class="section-title">Donations & Payments</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Financial
+                                    contributions</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p><strong>9.1 Voluntary.</strong> Donations are voluntary and generally non-refundable.</p>
+                            <p><strong>9.2 Processing.</strong> Payments through third-party processors (GCash, PayMaya,
+                                bank transfer).</p>
+                            <p><strong>9.3 Records.</strong> Donation records are maintained. Official receipts
+                                available upon request.</p>
+                            <p><strong>9.4 Allocation.</strong> Municipality endeavors to allocate according to
+                                designated purposes.</p>
+                        </div>
+                    </section>
+
+                    <section id="termination" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">10</span>
+                            <div>
+                                <h2 class="section-title">Termination & Suspension</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Account
+                                    management</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p><strong>10.1 By User.</strong> Terminate your account anytime by contacting support.</p>
+                            <p><strong>10.2 By Municipality.</strong> We may suspend or terminate for violations, fraud,
+                                or inactivity.</p>
+                            <p><strong>10.3 Effect.</strong> All rights cease upon termination. Surviving provisions
+                                continue.</p>
+                        </div>
+                    </section>
+
+                    <section id="disclaimers" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">11</span>
+                            <div>
+                                <h2 class="section-title">Disclaimers & Warranties</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">As-is service
+                                </p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p><strong>11.1 As-Is.</strong> Platform provided "as-is" and "as-available." Municipality
+                                disclaims all warranties.</p>
+                            <p><strong>11.2 No Guarantee.</strong> No warranty of uninterrupted, secure, or error-free
+                                service.</p>
+                            <p><strong>11.3 Accuracy.</strong> We strive for accuracy but do not warrant completeness of
+                                all content.</p>
+                            <p><strong>11.4 Third-Party.</strong> We do not endorse or assume responsibility for
+                                third-party services.</p>
+                        </div>
+                    </section>
+
+                    <section id="limitation" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">12</span>
+                            <div>
+                                <h2 class="section-title">Limitation of Liability</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Scope of
+                                    responsibility</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p>To the fullest extent permitted by law, the Municipality shall not be liable for
+                                indirect, incidental, special, consequential, or punitive damages.</p>
+                            <p>Total liability shall not exceed the amount paid in the prior twelve (12) months or
+                                ₱1,000.00, whichever is greater.</p>
+                        </div>
+                    </section>
+
+                    <section id="changes" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">13</span>
+                            <div>
+                                <h2 class="section-title">Changes to Terms</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Staying
+                                    current</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p>The Municipality may modify these Terms. Material changes communicated through Platform
+                                notices, email, or notifications.</p>
+                            <p>Continued use following revisions constitutes acceptance of modified Terms.</p>
+                        </div>
+                    </section>
+
+                    <section id="governing-law" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">14</span>
+                            <div>
+                                <h2 class="section-title">Governing Law & Dispute Resolution</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">Legal
+                                    framework</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px] space-y-3">
+                            <p><strong>14.1 Governing Law.</strong> Governed by the laws of the Republic of the
+                                Philippines.</p>
+                            <p><strong>14.2 Venue.</strong> Exclusive jurisdiction in courts of Tarlac Province.</p>
+                            <p><strong>14.3 ADR.</strong> Good-faith negotiations for thirty (30) days before formal
+                                proceedings.</p>
+                            <p><strong>14.4 Severability.</strong> Invalid provisions severed; remaining provisions
+                                continue in force.</p>
+                        </div>
+                    </section>
+
+                    <section id="contact" class="terms-section">
+                        <div class="flex items-start gap-4 mb-4">
+                            <span class="section-number">15</span>
+                            <div>
+                                <h2 class="section-title">Contact Information</h2>
+                                <p class="text-xs text-gray-400 mt-1 font-medium uppercase tracking-wider">We're here to
+                                    help</p>
+                            </div>
+                        </div>
+                        <div class="ml-[56px]">
+                            <p>For questions or concerns regarding these Terms:</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                                <div class="contact-grid-item">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i class="fa-solid fa-envelope text-tsu-blue text-sm"></i>
+                                        <strong class="text-sm text-tsu-blue">Email</strong>
+                                    </div>
+                                    <a href="mailto:support@victoria.gov.ph"
+                                        class="text-sm text-gray-600 hover:text-tsu-blue">support@victoria.gov.ph</a>
+                                </div>
+                                <div class="contact-grid-item">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i class="fa-solid fa-phone text-tsu-blue text-sm"></i>
+                                        <strong class="text-sm text-tsu-blue">Telephone</strong>
+                                    </div>
+                                    <a href="tel:+63431234567" class="text-sm text-gray-600 hover:text-tsu-blue">(043)
+                                        123-4567</a>
+                                </div>
+                                <div class="contact-grid-item sm:col-span-2">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i class="fa-solid fa-location-dot text-tsu-blue text-sm"></i>
+                                        <strong class="text-sm text-tsu-blue">Office Address</strong>
+                                    </div>
+                                    <p class="text-sm text-gray-600">Municipal Hall, Victoria, Tarlac, Philippines</p>
+                                    <p class="text-xs text-gray-400 mt-1">Monday – Friday, 8:00 AM – 5:00 PM</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+                        <div class="inline-flex items-center gap-2 bg-gray-50 rounded-full px-5 py-2.5">
+                            <i class="fa-solid fa-handshake text-tsu-blue"></i>
+                            <span class="text-sm text-gray-600 font-medium">By using OneVictoria, you agree to these
+                                terms</span>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="content-footer">
+                        <p>&copy; 2026 Municipality of Victoria. All rights reserved.</p>
+                        <div class="flex gap-4">
+                            <a href="privacy-policy.html" window.location.replace(this.href);>Privacy Policy</a>
+                            <span class="current" window.location.replace(this.href);>Terms of Service</span>
+                            <a href="help-center.html">Help Center</a>
+                            <a href="feedback.html" window.location.replace(this.href);>Feedback</a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        // Sidebar toggle for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+
+        function closeSidebarMobile() {
+            if (window.innerWidth <= 1024) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+            }
+        }
+
+        // TOC Active State
+        const tocLinks = document.querySelectorAll('.toc-link');
+        const sections = document.querySelectorAll('.terms-section');
+        const contentArea = document.getElementById('content-area');
+
+        function updateActiveTocLink() {
+            let currentSection = '';
+            const scrollPosition = contentArea.scrollTop + 160;
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+                if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                    currentSection = section.getAttribute('id');
+                }
+            });
+
+            tocLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${currentSection}`) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        contentArea.addEventListener('scroll', updateActiveTocLink, { passive: true });
+
+        // Smooth scroll for TOC links
+        tocLinks.forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    const offset = 80;
+                    const elementPosition = targetElement.offsetTop;
+                    contentArea.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feedback - OneVictoria Resident Hub</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            tsu: {
+              blue: "#0A2947", blueLight: "#0D3B5C", blueDark: "#061B2E",
+              gold: "#FFD700", goldLight: "#FFE44D", goldDark: "#CCAC00",
+              dark: "#2B0000", light: "#E8F0FE", accent: "#1A5276", muted: "#94A3B8",
+            },
+            surface: { DEFAULT: "#FFFFFF", alt: "#F8FAFC", hover: "#F1F5F9", border: "#E2E8F0" },
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..800&display=swap" rel="stylesheet" />
+  <link rel="shortcut icon" href="gemini-svg%20(1).svg" type="image/x-icon">
+  <style>
+    * {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .feedback-container {
+      background: white;
+      border-radius: 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 20px 50px rgba(10, 41, 71, 0.06);
+      overflow: hidden;
+      max-width: 750px;
+      margin: 0 auto;
+    }
+
+    .feedback-header {
+      background: linear-gradient(135deg, #0A2947 0%, #0D3B5C 40%, #1A5276 100%);
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feedback-header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255, 215, 0, 0.08) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .feedback-body {
+      padding: 2.5rem;
+    }
+
+    /* Stars */
+    .rating-stars {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .star-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #cbd5e1;
+      font-size: 1.25rem;
+    }
+
+    .star-btn:hover {
+      border-color: #0A2947;
+      transform: scale(1.1);
+    }
+
+    .star-btn.selected {
+      border-color: #FFD700;
+      background: #fffbeb;
+      box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+    }
+
+    .star-btn.selected i {
+      color: #FFD700;
+    }
+
+    .star-btn.highlight {
+      border-color: #FFD700;
+    }
+
+    .star-btn.highlight i {
+      color: #FFD700;
+    }
+
+    .input-field {
+      width: 100%;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      background: #f8fafc;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: #0A2947;
+      box-shadow: 0 0 0 4px rgba(10, 41, 71, 0.1);
+      background: white;
+    }
+
+    .input-field.error {
+      border-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .type-option {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1rem;
+      border-radius: 12px;
+      border: 2px solid #e2e8f0;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: white;
+    }
+
+    .type-option:hover {
+      border-color: #0A2947;
+      background: #f8fafc;
+    }
+
+    .type-option.selected {
+      border-color: #0A2947;
+      background: #E8F0FE;
+      box-shadow: 0 0 0 3px rgba(10, 41, 71, 0.1);
+    }
+
+    .type-option-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+    }
+
+    /* File Upload */
+    .file-upload-area {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: #f8fafc;
+    }
+
+    .file-upload-area:hover {
+      border-color: #0A2947;
+      background: #f1f5f9;
+    }
+
+    .file-upload-area.has-files {
+      border-color: #10b981;
+      background: #f0fdf4;
+    }
+
+    .file-preview-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      background: #f1f5f9;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      margin-top: 0.5rem;
+    }
+
+    .file-preview-img {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid #e2e8f0;
+    }
+
+    .submit-btn {
+      background: linear-gradient(135deg, #0A2947 0%, #1A5276 100%);
+      color: #FFD700;
+      font-weight: 700;
+      border-radius: 14px;
+      padding: 14px 32px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 16px rgba(10, 41, 71, 0.25);
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(10, 41, 71, 0.4);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: white;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .btn-back:hover {
+      border-color: #0A2947;
+      color: #0A2947;
+      background: #f8fafc;
+      box-shadow: 0 4px 12px rgba(10, 41, 71, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .success-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .success-card {
+      background: white;
+      border-radius: 24px;
+      padding: 2.5rem;
+      text-align: center;
+      max-width: 420px;
+      width: 90%;
+      animation: scaleIn 0.4s ease;
+    }
+
+    @media (max-width: 640px) {
+      .feedback-header {
+        padding: 1.5rem;
+      }
+
+      .feedback-body {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+
+<body class="antialiased text-gray-800 flex flex-col min-h-screen">
+
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6 lg:py-10 w-full flex-grow">
+
+    <div class="flex items-center justify-between mb-6">
+      <a href="index.html" class="btn-back"><i class="fa-solid fa-arrow-left text-xs"></i>Back to Homepage</a>
+      <div class="flex items-center gap-2 text-sm text-gray-400">
+        <i class="fa-solid fa-comment-dots text-xs"></i><span>Share Your Feedback</span>
+      </div>
+    </div>
+
+    <div class="feedback-container">
+
+      <div class="feedback-header text-white relative z-10">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-14 h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+            <i class="fa-solid fa-comment-dots text-tsu-gold text-2xl"></i>
+          </div>
+          <div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Feedback</h1>
+            <p class="text-gray-300 text-sm mt-1">OneVictoria Resident Hub</p>
+          </div>
+        </div>
+        <p class="mt-4 text-gray-400 text-sm max-w-lg">
+          We value your input. Share your thoughts, suggestions, or report issues.
+          You may also attach screenshots to help us understand your feedback better.
+        </p>
+      </div>
+
+      <div class="feedback-body">
+        <form id="feedback-form" class="space-y-6">
+
+          <!-- Rating -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-3">How would you rate your overall
+              experience?</label>
+            <div class="flex items-center gap-3">
+              <div class="rating-stars" id="rating-stars">
+                <button type="button" class="star-btn" data-rating="1" onclick="selectRating(this)" title="Very Poor"><i
+                    class="fa-solid fa-star"></i></button>
+                <button type="button" class="star-btn" data-rating="2" onclick="selectRating(this)" title="Poor"><i
+                    class="fa-solid fa-star"></i></button>
+                <button type="button" class="star-btn" data-rating="3" onclick="selectRating(this)" title="Average"><i
+                    class="fa-solid fa-star"></i></button>
+                <button type="button" class="star-btn" data-rating="4" onclick="selectRating(this)" title="Good"><i
+                    class="fa-solid fa-star"></i></button>
+                <button type="button" class="star-btn" data-rating="5" onclick="selectRating(this)" title="Excellent"><i
+                    class="fa-solid fa-star"></i></button>
+              </div>
+              <span id="rating-label" class="text-sm text-gray-500 ml-2">Select a rating</span>
+            </div>
+            <input type="hidden" id="rating-value" name="rating" />
+          </div>
+
+          <!-- Feedback Type -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">What type of feedback? <span
+                class="text-red-500">*</span></label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div class="type-option" data-type="Suggestion" onclick="selectType(this)">
+                <div class="type-option-icon bg-blue-50 text-blue-600"><i class="fa-solid fa-lightbulb"></i></div>
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Suggestion</p>
+                  <p class="text-xs text-gray-500">Ideas for improvement</p>
+                </div>
+              </div>
+              <div class="type-option" data-type="Bug Report" onclick="selectType(this)">
+                <div class="type-option-icon bg-red-50 text-red-600"><i class="fa-solid fa-bug"></i></div>
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Bug Report</p>
+                  <p class="text-xs text-gray-500">Report a technical issue</p>
+                </div>
+              </div>
+              <div class="type-option" data-type="Compliment" onclick="selectType(this)">
+                <div class="type-option-icon bg-emerald-50 text-emerald-600"><i class="fa-solid fa-thumbs-up"></i></div>
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Compliment</p>
+                  <p class="text-xs text-gray-500">Share what's working</p>
+                </div>
+              </div>
+              <div class="type-option" data-type="Other" onclick="selectType(this)">
+                <div class="type-option-icon bg-purple-50 text-purple-600"><i class="fa-solid fa-pen-to-square"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Other</p>
+                  <p class="text-xs text-gray-500">General feedback</p>
+                </div>
+              </div>
+            </div>
+            <input type="hidden" id="feedback-type" name="feedbackType" />
+            <p id="type-error" class="text-xs text-red-500 mt-1 hidden">Please select a feedback type</p>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="feedback-name" class="block text-sm font-semibold text-gray-700 mb-2">Full Name <span
+                  class="text-red-500">*</span></label>
+              <input type="text" id="feedback-name" name="fullName" class="input-field" placeholder="Juan Dela Cruz"
+                required />
+              <p id="name-error" class="text-xs text-red-500 mt-1 hidden">Please enter your full name</p>
+            </div>
+            <div>
+              <label for="feedback-email" class="block text-sm font-semibold text-gray-700 mb-2">Email Address <span
+                  class="text-red-500">*</span></label>
+              <input type="email" id="feedback-email" name="email" class="input-field" placeholder="juan@email.com"
+                required />
+              <p id="email-error" class="text-xs text-red-500 mt-1 hidden">Please enter a valid email address</p>
+            </div>
+            <div>
+              <label for="feedback-phone" class="block text-sm font-semibold text-gray-700 mb-2">Phone Number <span
+                  class="text-red-500">*</span></label>
+              <input type="tel" id="feedback-phone" name="phone" class="input-field" placeholder="09123456789"
+                maxlength="11" required />
+              <p id="phone-error" class="text-xs text-red-500 mt-1 hidden">Please enter a valid 11-digit phone number
+              </p>
+            </div>
+            <div>
+              <label for="feedback-address" class="block text-sm font-semibold text-gray-700 mb-2">Address <span
+                  class="text-xs text-gray-400 font-normal">(Optional)</span></label>
+              <input type="text" id="feedback-address" name="address" class="input-field"
+                placeholder="Barangay, Victoria, Tarlac" />
+            </div>
+          </div>
+
+          <!-- Subject -->
+          <div>
+            <label for="feedback-subject" class="block text-sm font-semibold text-gray-700 mb-2">Subject <span
+                class="text-red-500">*</span></label>
+            <input type="text" id="feedback-subject" name="subject" class="input-field"
+              placeholder="Brief subject of your feedback" required />
+            <p id="subject-error" class="text-xs text-red-500 mt-1 hidden">Please enter a subject</p>
+          </div>
+
+          <!-- Message -->
+          <div>
+            <label for="feedback-message" class="block text-sm font-semibold text-gray-700 mb-2">Your Feedback <span
+                class="text-red-500">*</span></label>
+            <textarea id="feedback-message" name="message" rows="5" class="input-field resize-none"
+              placeholder="Please describe your feedback in detail. What can we improve? Did you encounter any issues? What features would you like to see?"
+              required></textarea>
+            <div class="flex items-center justify-between mt-1">
+              <p class="text-xs text-gray-400">Minimum 10 characters</p>
+              <p class="text-xs text-gray-400"><span id="feedback-char-count">0</span>/2000 characters</p>
+            </div>
+            <p id="message-error" class="text-xs text-red-500 mt-1 hidden">Please enter your feedback (minimum 10
+              characters)</p>
+          </div>
+
+          <!-- Screenshot Attachment -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+              Attach Screenshots <span class="text-xs text-gray-400 font-normal">(Optional — Max 5 images, 10MB
+                each)</span>
+            </label>
+            <div class="file-upload-area" id="file-upload-area" onclick="document.getElementById('file-input').click()">
+              <input type="file" id="file-input" class="hidden" accept="image/*" multiple
+                onchange="handleFileUpload(event)" />
+              <div id="upload-placeholder">
+                <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-3"></i>
+                <p class="text-sm font-semibold text-gray-600">Click to upload screenshots</p>
+                <p class="text-xs text-gray-400 mt-1">PNG, JPG, or GIF — Max 10MB per image</p>
+              </div>
+              <div id="upload-preview" class="hidden text-left">
+                <p class="text-xs font-semibold text-gray-700 mb-2"><span id="file-count">0</span>/5 images selected</p>
+                <div id="file-list" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                <button type="button" onclick="event.stopPropagation(); clearFiles();"
+                  class="w-full text-xs text-red-500 hover:text-red-700 font-semibold py-2 hover:bg-red-50 rounded-lg transition-all border border-red-200 mt-2">
+                  <i class="fa-solid fa-trash-can mr-1.5"></i>Remove All
+                </button>
+              </div>
+            </div>
+            <p id="file-error" class="text-xs text-red-500 mt-1 hidden"></p>
+          </div>
+
+          <!-- Terms -->
+          <div class="flex items-start gap-3">
+            <input type="checkbox" id="feedback-terms"
+              class="mt-1 rounded border-gray-300 text-tsu-blue focus:ring-tsu-blue" />
+            <label for="feedback-terms" class="text-xs text-gray-500 leading-relaxed">
+              I confirm that the information provided is accurate and I understand it will be reviewed by the
+              OneVictoria team in accordance with the <a href="privacy-policy.html"
+                class="text-tsu-blue font-semibold hover:underline">Privacy Policy</a>.
+            </label>
+          </div>
+          <p id="terms-error" class="text-xs text-red-500 mt-1 hidden">Please agree to the terms before submitting</p>
+
+          <button type="submit" class="submit-btn" id="submit-feedback-btn">
+            <i class="fa-solid fa-paper-plane text-sm"></i><span>Submit Feedback</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <footer class="mt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-500 gap-3 px-2">
+      <p>&copy; 2026 Municipality of Victoria. All rights reserved.</p>
+      <div class="flex space-x-5 font-medium">
+        <a href="privacy-policy.html" class="hover:text-tsu-blue transition-colors">Privacy Policy</a>
+        <a href="terms-of-service.html" class="hover:text-tsu-blue transition-colors">Terms of Service</a>
+        <a href="help-center.html" class="hover:text-tsu-blue transition-colors">Help Center</a>
+        <span class="text-tsu-blue font-semibold">Feedback</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Success Overlay -->
+  <div id="feedback-success" class="success-overlay hidden">
+    <div class="success-card">
+      <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
+        <i class="fa-solid fa-circle-check text-4xl text-emerald-500"></i>
+      </div>
+      <h2 class="text-2xl font-extrabold text-gray-800 mb-2">Feedback Submitted</h2>
+      <p class="text-sm text-gray-500 mb-2">Reference: <strong id="ref-number-display" class="text-tsu-blue"></strong>
+      </p>
+      <p class="text-sm text-gray-500 mb-6 leading-relaxed">Your feedback has been received. Our team will review it and
+        respond if needed.</p>
+      <button onclick="closeFeedbackSuccess()"
+        class="w-full bg-tsu-blue text-tsu-gold font-bold py-3 rounded-xl hover:bg-tsu-blueLight transition-all text-sm">Close</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6rgutkYK7MZ3F0Xne6Zs4PyEiPME7ePM",
+      authDomain: "onevictoria-23409.firebaseapp.com",
+      projectId: "onevictoria-23409",
+      storageBucket: "onevictoria-23409.firebasestorage.app",
+      messagingSenderId: "334731169631",
+      appId: "1:334731169631:web:7484599232fef8b06eb0ea",
+      measurementId: "G-0ML9K6JSK8",
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    window.db = db;
+    window.fbCollection = collection;
+    window.fbAddDoc = addDoc;
+    window.fbServerTimestamp = serverTimestamp;
+  </script>
+
+  <script>
+    let selectedRating = 0;
+    let selectedFiles = [];
+    const MAX_FILES = 5;
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+    // Star Rating
+    function selectRating(button) {
+      const rating = parseInt(button.dataset.rating);
+      document.querySelectorAll('.star-btn').forEach((star, index) => {
+        star.classList.remove('selected', 'highlight');
+        if (index < rating) star.classList.add('selected');
+      });
+      selectedRating = rating;
+      document.getElementById('rating-value').value = rating;
+      document.getElementById('rating-label').textContent = ['', 'Very Poor', 'Poor', 'Average', 'Good', 'Excellent'][rating];
+    }
+
+    document.querySelectorAll('.star-btn').forEach(star => {
+      star.addEventListener('mouseenter', function () {
+        const hr = parseInt(this.dataset.rating);
+        document.querySelectorAll('.star-btn').forEach((s, i) => {
+          if (i < hr && !s.classList.contains('selected')) s.classList.add('highlight');
+        });
+      });
+      star.addEventListener('mouseleave', () => document.querySelectorAll('.star-btn').forEach(s => s.classList.remove('highlight')));
+    });
+
+    // Feedback Type
+    function selectType(element) {
+      document.querySelectorAll('.type-option').forEach(opt => opt.classList.remove('selected'));
+      element.classList.add('selected');
+      document.getElementById('feedback-type').value = element.dataset.type;
+      document.getElementById('type-error').classList.add('hidden');
+    }
+
+    // File Upload
+    function handleFileUpload(event) {
+      const files = Array.from(event.target.files);
+      const errors = [];
+
+      files.forEach(file => {
+        if (!file.type.startsWith('image/')) { errors.push(`${file.name} is not an image file.`); return; }
+        if (file.size > MAX_FILE_SIZE) { errors.push(`${file.name} exceeds 10MB limit.`); return; }
+        if (selectedFiles.length >= MAX_FILES) { errors.push('Maximum 5 images allowed.'); return; }
+        if (selectedFiles.some(f => f.name === file.name && f.size === file.size)) { errors.push(`${file.name} already added.`); return; }
+        selectedFiles.push(file);
+      });
+
+      if (errors.length) document.getElementById('file-error').textContent = errors.join(' ');
+      updateFilePreview();
+      event.target.value = '';
+    }
+
+    function updateFilePreview() {
+      const placeholder = document.getElementById('upload-placeholder');
+      const preview = document.getElementById('upload-preview');
+      const fileList = document.getElementById('file-list');
+      const uploadArea = document.getElementById('file-upload-area');
+      const fileError = document.getElementById('file-error');
+
+      if (selectedFiles.length === 0) {
+        placeholder.classList.remove('hidden'); preview.classList.add('hidden');
+        uploadArea.classList.remove('has-files'); fileError.textContent = '';
+      } else {
+        placeholder.classList.add('hidden'); preview.classList.remove('hidden');
+        uploadArea.classList.add('has-files'); fileError.textContent = '';
+        document.getElementById('file-count').textContent = selectedFiles.length;
+
+        fileList.innerHTML = selectedFiles.map((file, index) => {
+          const url = URL.createObjectURL(file);
+          return `
+                        <div class="file-preview-item">
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                <img src="${url}" alt="${file.name}" class="file-preview-img" />
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-medium text-gray-700 truncate">${file.name}</p>
+                                    <p class="text-[10px] text-gray-400">${formatFileSize(file.size)}</p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="event.stopPropagation(); removeFile(${index})" class="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all shrink-0 ml-2">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>`;
+        }).join('');
+      }
+    }
+
+    function removeFile(index) { selectedFiles.splice(index, 1); updateFilePreview(); }
+    function clearFiles() { selectedFiles = []; document.getElementById('file-input').value = ''; updateFilePreview(); }
+    function formatFileSize(bytes) { if (bytes === 0) return '0 Bytes'; const k = 1024; const sizes = ['Bytes', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
+
+    // Character counter
+    document.getElementById('feedback-message').addEventListener('input', function () {
+      document.getElementById('feedback-char-count').textContent = this.value.length;
+      if (this.value.length > 2000) { this.value = this.value.substring(0, 2000); document.getElementById('feedback-char-count').textContent = 2000; }
+      document.getElementById('message-error').classList.add('hidden');
+    });
+
+    // Phone validation
+    document.getElementById('feedback-phone').addEventListener('input', function (e) {
+      this.value = this.value.replace(/\D/g, '');
+      if (this.value.length > 11) this.value = this.value.slice(0, 11);
+    });
+
+    // Convert file to base64
+    function convertFileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Validate form
+    function validateForm() {
+      let valid = true;
+      const name = document.getElementById('feedback-name').value.trim();
+      const email = document.getElementById('feedback-email').value.trim();
+      const phone = document.getElementById('feedback-phone').value.trim();
+      const type = document.getElementById('feedback-type').value;
+      const subject = document.getElementById('feedback-subject').value.trim();
+      const message = document.getElementById('feedback-message').value.trim();
+      const terms = document.getElementById('feedback-terms').checked;
+
+      const checks = {
+        'name-error': !name || name.length < 2,
+        'email-error': !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+        'phone-error': !/^09\d{9}$/.test(phone),
+        'type-error': !type,
+        'subject-error': !subject,
+        'message-error': message.length < 10,
+        'terms-error': !terms,
+      };
+
+      Object.entries(checks).forEach(([id, failed]) => {
+        const el = document.getElementById(id);
+        const inputId = id.replace('-error', '');
+        const input = document.getElementById(inputId);
+        if (failed) { if (el) el.classList.remove('hidden'); if (input) input.classList.add('error'); valid = false; }
+        else { if (el) el.classList.add('hidden'); if (input) input.classList.remove('error'); }
+      });
+
+      return valid;
+    }
+
+    function generateReferenceNumber() {
+      const ts = Date.now().toString(36).toUpperCase();
+      const rnd = Math.random().toString(36).substring(2, 6).toUpperCase();
+      return `FB-${ts}-${rnd}`;
+    }
+
+    function closeFeedbackSuccess() { document.getElementById('feedback-success').classList.add('hidden'); }
+
+    // Form Submission
+    document.getElementById('feedback-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (!validateForm()) return;
+
+      const submitBtn = document.getElementById('submit-feedback-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-tsu-gold"></span><span>Submitting...</span>';
+
+      try {
+        const refNumber = generateReferenceNumber();
+        const name = document.getElementById('feedback-name').value.trim();
+        const email = document.getElementById('feedback-email').value.trim();
+        const phone = document.getElementById('feedback-phone').value.trim();
+        const address = document.getElementById('feedback-address').value.trim();
+        const feedbackType = document.getElementById('feedback-type').value;
+        const subject = document.getElementById('feedback-subject').value.trim();
+        const message = document.getElementById('feedback-message').value.trim();
+
+        // Convert images to base64
+        const attachments = [];
+        for (const file of selectedFiles) {
+          const base64 = await convertFileToBase64(file);
+          attachments.push({
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            data: base64,
+            uploadedAt: new Date().toISOString(),
+          });
+        }
+
+        const contactData = {
+          fullName: name,
+          email: email,
+          phone: phone,
+          address: address || null,
+          serviceCategory: 'Feedback',
+          priority: feedbackType === 'Bug Report' ? 'High' : 'Medium',
+          subject: subject,
+          message: message,
+          rating: selectedRating || null,
+          feedbackType: feedbackType,
+          termsAccepted: true,
+          status: 'Pending',
+          createdAt: window.fbServerTimestamp ? window.fbServerTimestamp() : new Date().toISOString(),
+          referenceNumber: refNumber,
+          source: 'feedback_page',
+          hasAttachments: attachments.length > 0,
+          attachmentCount: attachments.length,
+          attachments: attachments,
+        };
+
+        // Save to contact_messages (visible to admin)
+        if (window.fbCollection && window.fbAddDoc && window.db) {
+          const docRef = await window.fbAddDoc(window.fbCollection(window.db, 'contact_messages'), contactData);
+          console.log('✅ Feedback saved with ID:', docRef.id);
+
+          // If there are attachments, save them as subcollection for better organization
+          if (attachments.length > 0 && docRef.id) {
+            const attCol = window.fbCollection(window.db, 'contact_messages', docRef.id, 'attachments');
+            for (const att of attachments) {
+              await window.fbAddDoc(attCol, {
+                fileName: att.fileName,
+                fileType: att.fileType,
+                fileSize: att.fileSize,
+                data: att.data,
+                uploadedAt: att.uploadedAt,
+              });
+            }
+            console.log('✅ Attachments saved');
+          }
+        } else {
+          const existing = JSON.parse(localStorage.getItem('onevictoria_contacts') || '[]');
+          existing.push(contactData);
+          localStorage.setItem('onevictoria_contacts', JSON.stringify(existing));
+        }
+
+        document.getElementById('ref-number-display').textContent = refNumber;
+        document.getElementById('feedback-success').classList.remove('hidden');
+        this.reset();
+        selectedRating = 0;
+        document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.type-option').forEach(opt => opt.classList.remove('selected'));
+        document.getElementById('rating-label').textContent = 'Select a rating';
+        document.getElementById('feedback-char-count').textContent = '0';
+        clearFiles();
+      } catch (error) {
+        console.error('Submission error:', error);
+        alert('Failed to submit feedback. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-sm"></i><span>Submit Feedback</span>';
+      }
+    });
+
+    document.getElementById('feedback-success')?.addEventListener('click', function (e) { if (e.target === this) closeFeedbackSuccess(); });
+
+    window.selectRating = selectRating;
+    window.selectType = selectType;
+    window.handleFileUpload = handleFileUpload;
+    window.removeFile = removeFile;
+    window.clearFiles = clearFiles;
+    window.closeFeedbackSuccess = closeFeedbackSuccess;
+  </script>
+</body>
+
+</html>
