@@ -41,13 +41,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// ===== PAYMONGO CONFIGURATION =====
-const PAYMONGO_CONFIG = {
-  PUBLIC_KEY: "pk_test_pQCrR2WqLRBYuZh2BsCpSwAr",
-  SECRET_KEY: "sk_test_PeX2V85sQ9oRUytQeE4aacSU",
-  API_URL: "https://api.paymongo.com/v1",
-};
-
 // ===== STANDARDIZED STATUS CONSTANTS =====
 const STATUS = {
   APPROVED: "Approved",
@@ -80,9 +73,44 @@ let selectedProfilePicFile = undefined,
 let notificationCount = 0,
   allNotifications = [],
   showingAllNotifications = false;
+let mobileShowingAllNotifications = false;
 let sessionCheckInterval = null,
   currentSessionToken = null;
-let currentPaymentIntentId = null;
+
+// ===== MOBILE SIDE MENU =====
+function openMobileMenu() {
+  const menu = document.getElementById("mobile-side-menu");
+  const overlay = document.getElementById("mobile-overlay-menu");
+  if (menu) {
+    menu.classList.add("open");
+    document.body.classList.add("menu-open");
+  }
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    overlay.classList.add("show");
+  }
+}
+function closeMobileMenu() {
+  const menu = document.getElementById("mobile-side-menu");
+  const overlay = document.getElementById("mobile-overlay-menu");
+  if (menu) {
+    menu.classList.remove("open");
+    document.body.classList.remove("menu-open");
+  }
+  if (overlay) {
+    overlay.classList.remove("show");
+    setTimeout(() => overlay.classList.add("hidden"), 300);
+  }
+}
+window.openMobileMenu = openMobileMenu;
+window.closeMobileMenu = closeMobileMenu;
+
+// ===== HEADER DROPDOWN MANAGEMENT =====
+function closeAllHeaderDropdowns() {
+  document
+    .querySelectorAll(".header-dropdown")
+    .forEach((d) => d.classList.remove("show"));
+}
 
 // ===== DATE UTILITIES =====
 function formatShortDate(ts) {
@@ -96,10 +124,10 @@ function formatShortDate(ts) {
 }
 function formatRelativeTime(ts) {
   if (!ts) return "";
-  const now = new Date();
-  const date = ts.toDate ? ts.toDate() : new Date(ts);
-  const diffMs = now - date;
-  const diffSec = Math.floor(diffMs / 1000),
+  const now = new Date(),
+    date = ts.toDate ? ts.toDate() : new Date(ts);
+  const diffMs = now - date,
+    diffSec = Math.floor(diffMs / 1000),
     diffMin = Math.floor(diffSec / 60),
     diffHr = Math.floor(diffMin / 60),
     diffDays = Math.floor(diffHr / 24),
@@ -140,18 +168,25 @@ function formatTimeDisplay(timeValue) {
   if (!timeValue) return "";
   if (typeof timeValue === "string" && timeValue.includes(":")) {
     const [hours, minutes] = timeValue.split(":");
-    const h = parseInt(hours);
-    const ampm = h >= 12 ? "PM" : "AM";
+    const h = parseInt(hours),
+      ampm = h >= 12 ? "PM" : "AM";
     return `${h % 12 || 12}:${minutes} ${ampm}`;
   }
   return timeValue;
 }
 
-// ===== MOBILE MENU TOGGLE =====
+// ===== MOBILE MENU TOGGLE (backward compatible) =====
 window.toggleMobileMenu = function () {
-  const sidebar = document.getElementById("sidebar");
-  const overlay = document.getElementById("mobile-overlay");
-  const body = document.body;
+  const mobileMenu = document.getElementById("mobile-side-menu");
+  if (mobileMenu) {
+    mobileMenu.classList.contains("open")
+      ? closeMobileMenu()
+      : openMobileMenu();
+    return;
+  }
+  const sidebar = document.getElementById("sidebar"),
+    overlay = document.getElementById("mobile-overlay"),
+    body = document.body;
   if (!sidebar) return;
   const isOpen = sidebar.classList.contains("translate-x-0");
   if (isOpen) {
@@ -167,313 +202,99 @@ window.toggleMobileMenu = function () {
   }
 };
 
-// ===== PAYMONGO API FUNCTIONS =====
-
-/**
- * Create a PayMongo Payment Intent
- */
-async function createPayMongoPaymentIntent(
-  amount,
-  description,
-  paymentMethod,
-  billingDetails = {},
-) {
-  try {
-    const amountInCentavos = Math.round(amount * 100);
-    const encodedKey = btoa(PAYMONGO_CONFIG.SECRET_KEY);
-
-    const paymentIntentData = {
-      data: {
-        attributes: {
-          amount: amountInCentavos,
-          currency: "PHP",
-          payment_method_allowed: [paymentMethod],
-          description: description || "Donation to Municipality of Victoria",
-          statement_descriptor: "Victoria LGU",
-          metadata: {
-            donor_name: billingDetails.name || "Anonymous",
-            purpose: description,
-          },
-        },
-      },
-    };
-
-    const response = await fetch(`${PAYMONGO_CONFIG.API_URL}/payment_intents`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${encodedKey}`,
-      },
-      body: JSON.stringify(paymentIntentData),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.errors?.[0]?.detail || "Failed to create payment intent",
-      );
-    }
-
-    return data.data;
-  } catch (error) {
-    console.error("PayMongo payment intent error:", error);
-    throw error;
+// ===== NOTIFICATION DETAIL OVERLAY =====
+window.openNotificationDetail = function (notifId, type, title, message, time) {
+  const overlay = document.getElementById("notification-detail-modal");
+  if (!overlay) return;
+  document.getElementById("notif-detail-title").textContent =
+    title || "Notification";
+  document.getElementById("notif-detail-time").innerHTML =
+    `<i class="fa-solid fa-clock mr-1"></i>${time || "Just now"}`;
+  document.getElementById("notif-detail-message").textContent = message || "";
+  const iconContainer = document.getElementById("notif-detail-icon");
+  const iconInner = document.getElementById("notif-detail-icon-inner");
+  let bgClass = "bg-blue-100",
+    iconClass = "fa-bell text-blue-600";
+  switch (type) {
+    case "volunteer_approved":
+      bgClass = "bg-emerald-100";
+      iconClass = "fa-circle-check text-emerald-600";
+      break;
+    case "volunteer_rejected":
+      bgClass = "bg-rose-100";
+      iconClass = "fa-circle-xmark text-rose-600";
+      break;
+    case "donation_confirmed":
+      bgClass = "bg-emerald-100";
+      iconClass = "fa-circle-check text-emerald-600";
+      break;
+    case "donation_rejected":
+      bgClass = "bg-rose-100";
+      iconClass = "fa-circle-xmark text-rose-600";
+      break;
+    case "hours_credited":
+      bgClass = "bg-purple-100";
+      iconClass = "fa-clock text-purple-600";
+      break;
+    case "contact_status_update":
+      bgClass = "bg-indigo-100";
+      iconClass = "fa-envelope-circle-check text-indigo-600";
+      break;
   }
-}
-
-/**
- * Create a payment method for GCash
- */
-async function createGCashPaymentMethod(billingDetails = {}) {
-  try {
-    const encodedKey = btoa(PAYMONGO_CONFIG.PUBLIC_KEY);
-
-    const paymentMethodData = {
-      data: {
-        attributes: {
-          type: "gcash",
-          billing: {
-            name: billingDetails.name || "Donor",
-            email: billingDetails.email || "donor@example.com",
-            phone: billingDetails.phone || "09123456789",
-          },
-        },
-      },
-    };
-
-    const response = await fetch(`${PAYMONGO_CONFIG.API_URL}/payment_methods`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${encodedKey}`,
-      },
-      body: JSON.stringify(paymentMethodData),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.errors?.[0]?.detail || "Failed to create GCash payment method",
-      );
-    }
-
-    return data.data;
-  } catch (error) {
-    console.error("GCash payment method error:", error);
-    throw error;
+  iconContainer.className = `w-12 h-12 rounded-full flex items-center justify-center shadow-md ${bgClass}`;
+  iconInner.className = `fa-solid ${iconClass} text-lg`;
+  overlay.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+};
+window.closeNotificationDetail = function () {
+  const modal = document.getElementById("notification-detail-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+    document.body.style.overflow = "";
   }
-}
+};
 
-/**
- * Create a payment method for PayMaya
- */
-async function createPayMayaPaymentMethod(billingDetails = {}) {
-  try {
-    const encodedKey = btoa(PAYMONGO_CONFIG.PUBLIC_KEY);
-
-    const paymentMethodData = {
-      data: {
-        attributes: {
-          type: "paymaya",
-          billing: {
-            name: billingDetails.name || "Donor",
-            email: billingDetails.email || "donor@example.com",
-            phone: billingDetails.phone || "09123456789",
-          },
-        },
-      },
-    };
-
-    const response = await fetch(`${PAYMONGO_CONFIG.API_URL}/payment_methods`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${encodedKey}`,
-      },
-      body: JSON.stringify(paymentMethodData),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.errors?.[0]?.detail || "Failed to create PayMaya payment method",
-      );
-    }
-
-    return data.data;
-  } catch (error) {
-    console.error("PayMaya payment method error:", error);
-    throw error;
+// ===== CLEAR ALL NOTIFICATIONS =====
+window.clearAllNotifications = async function() {
+  if (!loggedInUser?.id) {
+    window.showAlert('Error', 'Please login first.', 'error');
+    return;
   }
-}
-
-/**
- * Attach payment method to payment intent
- */
-async function attachPaymentMethodToIntent(
-  paymentIntentId,
-  paymentMethodId,
-  returnUrl,
-) {
+  
+  showLoading('Clearing notifications...');
   try {
-    const encodedKey = btoa(PAYMONGO_CONFIG.SECRET_KEY);
-
-    const attachData = {
-      data: {
-        attributes: {
-          payment_method: paymentMethodId,
-          return_url: returnUrl || `${window.location.origin}/payment-success`,
-        },
-      },
-    };
-
-    const response = await fetch(
-      `${PAYMONGO_CONFIG.API_URL}/payment_intents/${paymentIntentId}/attach`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${encodedKey}`,
-        },
-        body: JSON.stringify(attachData),
-      },
+    // Get all notifications for this user from Firebase
+    const snap = await getDocs(
+      query(
+        collection(db, 'notifications'),
+        where('residentId', '==', loggedInUser.id)
+      )
     );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.errors?.[0]?.detail || "Failed to attach payment method",
-      );
-    }
-
-    return data.data;
-  } catch (error) {
-    console.error("PayMongo attach payment method error:", error);
-    throw error;
-  }
-}
-
-/**
- * Check payment status
- */
-async function checkPaymentStatus(paymentIntentId) {
-  try {
-    const encodedKey = btoa(PAYMONGO_CONFIG.SECRET_KEY);
-
-    const response = await fetch(
-      `${PAYMONGO_CONFIG.API_URL}/payment_intents/${paymentIntentId}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Basic ${encodedKey}`,
-        },
-      },
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data.errors?.[0]?.detail || "Failed to check payment status",
-      );
-    }
-
-    return data.data;
-  } catch (error) {
-    console.error("Payment status check error:", error);
-    throw error;
-  }
-}
-
-// ===== QR CODE GENERATION =====
-async function generateQRCode(method) {
-  const ph = document.getElementById("qr-code-placeholder");
-  if (!ph) return;
-
-  const amountInput = document.getElementById("donation-amount");
-  let amountInCentavos = 15000;
-  if (amountInput && amountInput.value) {
-    const parsedAmount = parseFloat(amountInput.value);
-    if (!isNaN(parsedAmount) && parsedAmount > 0) {
-      amountInCentavos = Math.round(parsedAmount * 100);
-    }
-  }
-
-  ph.innerHTML = `
-    <div class="text-center p-3">
-      <i class="fa-solid fa-spinner fa-spin text-2xl text-gray-400 mb-2"></i>
-      <p class="text-[10px] text-gray-500">Generating ${method.toUpperCase()} QR...</p>
-    </div>`;
-
-  try {
-    const paymentIntent = await createPayMongoPaymentIntent(
-      amountInCentavos / 100,
-      `Donation via ${method.toUpperCase()}`,
-      method,
-      {
-        name: currentDonationData?.donorName || "Donor",
-        email: currentDonationData?.donorEmail || "",
-        phone: currentDonationData?.donorPhone || "",
-      },
-    );
-
-    let paymentMethod;
-    if (method === "gcash") {
-      paymentMethod = await createGCashPaymentMethod({
-        name: currentDonationData?.donorName || "Donor",
-        email: currentDonationData?.donorEmail || "",
-        phone: currentDonationData?.donorPhone || "",
+    
+    if (!snap.empty) {
+      const batch = writeBatch(db);
+      snap.forEach(d => {
+        batch.delete(d.ref);
       });
-    } else if (method === "paymaya") {
-      paymentMethod = await createPayMayaPaymentMethod({
-        name: currentDonationData?.donorName || "Donor",
-        email: currentDonationData?.donorEmail || "",
-        phone: currentDonationData?.donorPhone || "",
-      });
+      await batch.commit();
+      console.log('✅ All notifications deleted from Firebase');
     }
-
-    if (paymentMethod) {
-      const attachedIntent = await attachPaymentMethodToIntent(
-        paymentIntent.id,
-        paymentMethod.id,
-        `${window.location.origin}/payment-success`,
-      );
-
-      if (attachedIntent.attributes?.next_action?.type === "redirect") {
-        const redirectUrl = attachedIntent.attributes.next_action.redirect.url;
-        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(redirectUrl)}`;
-        const methodColor =
-          method === "gcash" ? "text-blue-600" : "text-purple-600";
-
-        ph.innerHTML = `
-          <div class="text-center p-3">
-            <img src="${qrCodeUrl}" alt="${method} QR Code" class="mx-auto mb-2 border p-1 rounded shadow-sm w-32 h-32 object-contain bg-white" />
-            <p class="text-[10px] font-bold ${methodColor}">${method.toUpperCase()} QR</p>
-            <p class="text-[10px] text-gray-500">Scan to pay ₱${(amountInCentavos / 100).toFixed(2)}</p>
-            <button onclick="window.open('${redirectUrl}', '_blank')" class="mt-2 text-[10px] text-blue-600 underline hover:text-blue-800">
-              Or click here to pay
-            </button>
-          </div>
-        `;
-
-        currentPaymentIntentId = paymentIntent.id;
-      }
-    }
-  } catch (error) {
-    console.error("Error generating QR:", error);
-    ph.innerHTML = `
-      <div class="text-center p-3">
-        <i class="fa-solid fa-triangle-exclamation text-2xl text-red-500 mb-2"></i>
-        <p class="text-[10px] font-bold text-red-500">Failed to generate QR</p>
-        <p class="text-[8px] text-gray-500 mt-1">Please try again or use another payment method</p>
-      </div>
-    `;
+    
+    // Clear local state
+    allNotifications = [];
+    notificationCount = 0;
+    updateNotificationBadge();
+    renderNotificationDropdown();
+    renderMobileNotificationDropdown();
+    
+    hideLoading();
+    window.showAlert('Notifications Cleared', 'All notifications have been permanently removed.', 'success');
+  } catch (e) {
+    hideLoading();
+    console.error('Error clearing notifications:', e);
+    window.showAlert('Error', 'Failed to clear notifications.', 'error');
   }
-}
+};
 
 // ===== PAYMENT PROCESSING =====
 window.selectPaymentMethod = function (method) {
@@ -493,18 +314,18 @@ window.selectPaymentMethod = function (method) {
     if (qr) qr.classList.add("hidden");
   }
 };
-
 window.setAmount = function (amount) {
   const inp = document.getElementById("donation-amount");
   if (inp) inp.value = amount;
-  if (
-    selectedPaymentMethod === "gcash" ||
-    selectedPaymentMethod === "paymaya"
-  ) {
-    generateQRCode(selectedPaymentMethod);
-  }
 };
-
+function generateQRCode(method) {
+  const ph = document.getElementById("qr-code-placeholder");
+  if (!ph) return;
+  ph.innerHTML =
+    method === "gcash"
+      ? `<div class="text-center p-3"><i class="fa-solid fa-mobile-screen text-4xl text-blue-600 mb-2"></i><p class="text-[10px] font-bold">GCash QR</p><p class="text-[10px] text-gray-500">Scan to pay</p></div>`
+      : `<div class="text-center p-3"><i class="fa-solid fa-wallet text-4xl text-purple-600 mb-2"></i><p class="text-[10px] font-bold">PayMaya QR</p><p class="text-[10px] text-gray-500">Scan to pay</p></div>`;
+}
 window.openPaymentModal = function (item, purpose) {
   if (!loggedInUser) {
     window.showAlert("Error", "Please login first.", "error");
@@ -515,8 +336,6 @@ window.openPaymentModal = function (item, purpose) {
     purpose: purpose || "General",
     donorName: loggedInUser.name || "Anonymous",
     donorId: loggedInUser.id || "",
-    donorEmail: loggedInUser.email || "",
-    donorPhone: loggedInUser.phone || "",
   };
   const pi = document.getElementById("payment-item");
   if (pi) pi.textContent = currentDonationData.item;
@@ -525,7 +344,6 @@ window.openPaymentModal = function (item, purpose) {
   const pdn = document.getElementById("payment-donor-name");
   if (pdn) pdn.value = currentDonationData.donorName;
   selectedPaymentMethod = null;
-  currentPaymentIntentId = null;
   const spm = document.getElementById("selected-payment-method");
   if (spm) spm.value = "";
   document
@@ -537,38 +355,41 @@ window.openPaymentModal = function (item, purpose) {
   if (da) da.value = "";
   window.toggleModal("payment-modal");
 };
-
-/**
- * Save donation to Firestore
- */
-async function saveDonation(donationData) {
+async function saveDonation(pr) {
   try {
-    await addDoc(collection(db, "donations"), {
-      donorName: donationData.donorName || "Anonymous",
-      donorId: donationData.donorId || "",
-      donorEmail: donationData.donorEmail || "",
-      donorPhone: donationData.donorPhone || "",
-      item: donationData.item || "Donation",
-      purpose: donationData.purpose || "General",
-      amount: donationData.amount || 0,
-      paymentMethod: donationData.paymentMethod || "unknown",
-      transactionId: donationData.transactionId,
-      paymentIntentId: donationData.paymentIntentId || null,
-      paymentStatus: donationData.status || STATUS.PENDING,
-      paymentTimestamp: donationData.timestamp || new Date().toISOString(),
+    if (!pr || !pr.transactionId) throw new Error("Invalid payment result");
+    if (!currentDonationData || !currentDonationData.donorId)
+      throw new Error("Donation data missing");
+    const dd = {
+      donorName: currentDonationData.donorName || "Anonymous",
+      donorId: currentDonationData.donorId || "",
+      item: currentDonationData.item || "Donation",
+      purpose: currentDonationData.purpose || "General",
+      amount: pr.amount || 0,
+      paymentMethod: pr.method || "unknown",
+      transactionId: pr.transactionId,
+      paymentStatus: pr.status || STATUS.PENDING,
+      paymentTimestamp: pr.timestamp || new Date().toISOString(),
       status: STATUS.PENDING,
       createdAt: serverTimestamp(),
-      metadata: donationData.metadata || {},
-    });
+    };
+    if (pr.bankDetails)
+      dd.bankDetails = {
+        bankName: pr.bankDetails.bankName || "",
+        accountNumber: pr.bankDetails.accountNumber || "",
+        accountName: pr.bankDetails.accountName || "",
+      };
+    if (pr.cashDetails)
+      dd.cashDetails = {
+        officeAddress: pr.cashDetails.officeAddress || "",
+        officeHours: pr.cashDetails.officeHours || "",
+      };
+    await addDoc(collection(db, "donations"), dd);
   } catch (e) {
     console.error("Save donation error:", e);
     throw new Error("Failed to save donation: " + e.message);
   }
 }
-
-/**
- * Main payment processing function
- */
 window.processPayment = async function () {
   const pm =
     selectedPaymentMethod ||
@@ -578,7 +399,6 @@ window.processPayment = async function () {
   );
   const donorName =
     document.getElementById("payment-donor-name")?.value?.trim() || "";
-
   if (!pm) {
     window.showAlert("Error", "Select a payment method.", "error");
     return;
@@ -595,343 +415,91 @@ window.processPayment = async function () {
     window.showAlert("Error", "Donation data missing.", "error");
     return;
   }
-
   currentDonationData.donorName = donorName;
   showLoading("Processing payment...");
-
   try {
-    let result;
-
+    let pr;
     switch (pm) {
       case "gcash":
-        result = await processGCashPayment(amount, currentDonationData);
+        pr = await processGCashPayment(amount);
         break;
       case "paymaya":
-        result = await processPayMayaPayment(amount, currentDonationData);
+        pr = await processPayMayaPayment(amount);
         break;
       case "bank_transfer":
-        result = await processBankTransfer(amount, currentDonationData);
+        pr = await processBankTransfer(amount);
         break;
       case "cash":
-        result = await processCashPayment(amount, currentDonationData);
+        pr = await processCashPayment(amount);
         break;
       default:
         throw new Error("Invalid payment method");
     }
-
-    await saveDonation(result);
+    await saveDonation(pr);
     window.toggleModal("payment-modal");
     document.getElementById("donation-form")?.reset();
     document.getElementById("payment-form")?.reset();
     currentDonationData = null;
     selectedPaymentMethod = null;
-    currentPaymentIntentId = null;
     hideLoading();
-
-    if (
-      result.status === STATUS.PENDING &&
-      (pm === "gcash" || pm === "paymaya")
-    ) {
-      window.showAlert(
-        "Payment Processing",
-        `Please complete the payment in the opened window. Amount: ₱${amount.toLocaleString()}`,
-        "success",
-      );
-    } else {
-      window.showAlert(
-        "Donation Submitted!",
-        `Thank you for your donation of ₱${amount.toLocaleString()}! Your donation is pending confirmation.`,
-        "success",
-      );
-    }
+    window.showAlert(
+      "Payment Successful!",
+      `Thank you for ₱${amount.toLocaleString()}!`,
+      "success",
+    );
   } catch (e) {
     hideLoading();
-    console.error("Payment processing error:", e);
     window.showAlert(
       "Payment Failed",
-      e.message || "An error occurred during payment processing.",
+      e.message || "An error occurred.",
       "error",
     );
   }
 };
-
-/**
- * Process GCash payment via PayMongo
- */
-async function processGCashPayment(amount, donationData) {
-  try {
-    const description = `Donation: ${donationData.purpose} - ${donationData.donorName}`;
-
-    const paymentIntent = await createPayMongoPaymentIntent(
-      amount,
-      description,
-      "gcash",
-      {
-        name: donationData.donorName,
-        email: donationData.donorEmail,
-        phone: donationData.donorPhone,
-      },
-    );
-
-    const paymentMethod = await createGCashPaymentMethod({
-      name: donationData.donorName,
-      email: donationData.donorEmail,
-      phone: donationData.donorPhone,
-    });
-
-    const result = await attachPaymentMethodToIntent(
-      paymentIntent.id,
-      paymentMethod.id,
-      `${window.location.origin}/payment-success`,
-    );
-
-    if (result.attributes?.next_action?.type === "redirect") {
-      const redirectUrl = result.attributes.next_action.redirect.url;
-      window.open(redirectUrl, "_blank");
-    }
-
-    return {
-      transactionId: paymentIntent.id,
-      paymentIntentId: paymentIntent.id,
-      method: "gcash",
-      amount: amount,
-      status: STATUS.PENDING,
-      timestamp: new Date().toISOString(),
-      donorName: donationData.donorName,
-      donorId: donationData.donorId,
-      donorEmail: donationData.donorEmail,
-      donorPhone: donationData.donorPhone,
-      item: donationData.item,
-      purpose: donationData.purpose,
-      paymentMethod: "gcash",
-      metadata: {
-        paymentIntentId: paymentIntent.id,
-        paymentMethodId: paymentMethod.id,
-        redirectUrl: result.attributes?.next_action?.redirect?.url || null,
-      },
-    };
-  } catch (error) {
-    console.error("GCash payment error:", error);
-    return {
-      transactionId: `GCASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      paymentIntentId: null,
-      method: "gcash",
-      amount: amount,
-      status: STATUS.PENDING,
-      timestamp: new Date().toISOString(),
-      donorName: donationData.donorName,
-      donorId: donationData.donorId,
-      donorEmail: donationData.donorEmail,
-      donorPhone: donationData.donorPhone,
-      item: donationData.item,
-      purpose: donationData.purpose,
-      paymentMethod: "gcash",
-      metadata: { fallback: true, error: error.message },
-    };
-  }
-}
-
-/**
- * Process PayMaya payment via PayMongo
- */
-async function processPayMayaPayment(amount, donationData) {
-  try {
-    const description = `Donation: ${donationData.purpose} - ${donationData.donorName}`;
-
-    const paymentIntent = await createPayMongoPaymentIntent(
-      amount,
-      description,
-      "paymaya",
-      {
-        name: donationData.donorName,
-        email: donationData.donorEmail,
-        phone: donationData.donorPhone,
-      },
-    );
-
-    const paymentMethod = await createPayMayaPaymentMethod({
-      name: donationData.donorName,
-      email: donationData.donorEmail,
-      phone: donationData.donorPhone,
-    });
-
-    const result = await attachPaymentMethodToIntent(
-      paymentIntent.id,
-      paymentMethod.id,
-      `${window.location.origin}/payment-success`,
-    );
-
-    if (result.attributes?.next_action?.type === "redirect") {
-      const redirectUrl = result.attributes.next_action.redirect.url;
-      window.open(redirectUrl, "_blank");
-    }
-
-    return {
-      transactionId: paymentIntent.id,
-      paymentIntentId: paymentIntent.id,
-      method: "paymaya",
-      amount: amount,
-      status: STATUS.PENDING,
-      timestamp: new Date().toISOString(),
-      donorName: donationData.donorName,
-      donorId: donationData.donorId,
-      donorEmail: donationData.donorEmail,
-      donorPhone: donationData.donorPhone,
-      item: donationData.item,
-      purpose: donationData.purpose,
-      paymentMethod: "paymaya",
-      metadata: {
-        paymentIntentId: paymentIntent.id,
-        paymentMethodId: paymentMethod.id,
-        redirectUrl: result.attributes?.next_action?.redirect?.url || null,
-      },
-    };
-  } catch (error) {
-    console.error("PayMaya payment error:", error);
-    return {
-      transactionId: `MAYA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      paymentIntentId: null,
-      method: "paymaya",
-      amount: amount,
-      status: STATUS.PENDING,
-      timestamp: new Date().toISOString(),
-      donorName: donationData.donorName,
-      donorId: donationData.donorId,
-      donorEmail: donationData.donorEmail,
-      donorPhone: donationData.donorPhone,
-      item: donationData.item,
-      purpose: donationData.purpose,
-      paymentMethod: "paymaya",
-      metadata: { fallback: true, error: error.message },
-    };
-  }
-}
-
-/**
- * Process bank transfer payment
- */
-async function processBankTransfer(amount, donationData) {
-  const reference = `BANK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-  setTimeout(() => {
-    window.showAlert(
-      "Bank Transfer Instructions",
-      `Please transfer ₱${amount.toFixed(2)} to:\n\nBank: Land Bank of the Philippines\nAccount: 1234-5678-9012\nAccount Name: Municipality of Victoria\nReference: ${reference}\n\nYour donation will be confirmed after verification.`,
-      "success",
-    );
-  }, 1500);
-
+async function processGCashPayment(a) {
   return {
-    transactionId: reference,
-    paymentIntentId: null,
-    method: "bank_transfer",
-    amount: amount,
+    transactionId: `GCASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    method: "gcash",
+    amount: a,
     status: STATUS.PENDING,
     timestamp: new Date().toISOString(),
-    donorName: donationData.donorName,
-    donorId: donationData.donorId,
-    donorEmail: donationData.donorEmail,
-    donorPhone: donationData.donorPhone,
-    item: donationData.item,
-    purpose: donationData.purpose,
-    paymentMethod: "bank_transfer",
-    metadata: {
-      bankName: "Land Bank of the Philippines",
-      accountNumber: "1234-5678-9012",
-      accountName: "Municipality of Victoria",
-      reference: reference,
-    },
   };
 }
-
-/**
- * Process cash payment
- */
-async function processCashPayment(amount, donationData) {
-  const reference = `CASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-  setTimeout(() => {
-    window.showAlert(
-      "Cash Donation",
-      `Please visit the Municipal Treasurer's Office to complete your cash donation of ₱${amount.toFixed(2)}.\n\nAddress: Municipal Hall, Victoria, Tarlac\nHours: 8:00 AM - 5:00 PM, Monday to Friday\nReference: ${reference}`,
-      "success",
-    );
-  }, 1500);
-
+async function processPayMayaPayment(a) {
   return {
-    transactionId: reference,
-    paymentIntentId: null,
-    method: "cash",
-    amount: amount,
+    transactionId: `MAYA-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    method: "paymaya",
+    amount: a,
     status: STATUS.PENDING,
     timestamp: new Date().toISOString(),
-    donorName: donationData.donorName,
-    donorId: donationData.donorId,
-    donorEmail: donationData.donorEmail,
-    donorPhone: donationData.donorPhone,
-    item: donationData.item,
-    purpose: donationData.purpose,
-    paymentMethod: "cash",
-    metadata: {
+  };
+}
+async function processBankTransfer(a) {
+  return {
+    transactionId: `BANK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    method: "bank_transfer",
+    amount: a,
+    status: STATUS.PENDING,
+    bankDetails: {
+      bankName: "GCash",
+      accountNumber: "4413-6000-0859-3972",
+      accountName: "Municipality of Victoria",
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
+async function processCashPayment(a) {
+  return {
+    transactionId: `CASH-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    method: "cash",
+    amount: a,
+    status: STATUS.PENDING,
+    cashDetails: {
       officeAddress: "Municipal Hall, Victoria, Tarlac",
       officeHours: "8:00 AM - 5:00 PM, Monday to Friday",
-      reference: reference,
     },
+    timestamp: new Date().toISOString(),
   };
-}
-
-/**
- * Verify payment on return from PayMongo
- */
-async function verifyPaymentOnReturn(paymentIntentId) {
-  try {
-    showLoading("Verifying payment...");
-
-    const paymentStatus = await checkPaymentStatus(paymentIntentId);
-
-    if (paymentStatus.attributes.status === "succeeded") {
-      window.showAlert(
-        "Payment Successful!",
-        "Your donation has been processed successfully. Thank you!",
-        "success",
-      );
-
-      if (currentDonationData) {
-        await saveDonation({
-          ...currentDonationData,
-          amount: paymentStatus.attributes.amount / 100,
-          status: STATUS.PENDING,
-          paymentIntentId: paymentIntentId,
-          transactionId: paymentIntentId,
-          paymentMethod: "gcash/paymaya",
-          timestamp: new Date().toISOString(),
-        });
-        currentDonationData = null;
-      }
-    } else if (paymentStatus.attributes.status === "awaiting_payment_method") {
-      window.showAlert(
-        "Payment Pending",
-        "Please complete the payment process. Your donation is waiting for payment.",
-        "warning",
-      );
-    } else {
-      window.showAlert(
-        "Payment Failed",
-        `Payment status: ${paymentStatus.attributes.status}. Please try again.`,
-        "error",
-      );
-    }
-
-    hideLoading();
-  } catch (error) {
-    hideLoading();
-    console.error("Payment verification error:", error);
-    window.showAlert(
-      "Verification Failed",
-      "We couldn't verify your payment. Please contact support.",
-      "error",
-    );
-  }
 }
 
 // ===== SESSION MANAGEMENT =====
@@ -943,17 +511,16 @@ async function enforceSingleSession(uid) {
   try {
     const userDoc = await getDoc(doc(db, "residents", uid));
     if (!userDoc.exists()) return true;
-    const userData = userDoc.data();
-    const storedToken = userData.sessionToken;
+    const userData = userDoc.data(),
+      storedToken = userData.sessionToken;
     if (storedToken && storedToken !== currentSessionToken) {
       const lastActive = userData.lastActive?.toDate
         ? userData.lastActive.toDate()
         : new Date(0);
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-      if (lastActive > fiveMinutesAgo) {
+      if (lastActive > new Date(Date.now() - 5 * 60 * 1000)) {
         window.showAlert(
           "Session Terminated",
-          "This account is already logged in on another device. For security reasons, only one device can be active at a time.",
+          "This account is already logged in on another device.",
           "error",
         );
         await signOut(auth);
@@ -967,9 +534,7 @@ async function enforceSingleSession(uid) {
             sessionToken: null,
             isOnline: false,
           });
-        } catch (e) {
-          console.error("Error clearing session:", e);
-        }
+        } catch (e) {}
         return false;
       }
     }
@@ -996,13 +561,14 @@ function startSessionHeartbeat(uid) {
     try {
       const userDoc = await getDoc(doc(db, "residents", uid));
       if (!userDoc.exists()) return;
-      const userData = userDoc.data();
-      const storedToken = userData.sessionToken;
-      if (storedToken && storedToken !== currentSessionToken) {
+      if (
+        userDoc.data().sessionToken &&
+        userDoc.data().sessionToken !== currentSessionToken
+      ) {
         clearInterval(sessionCheckInterval);
         window.showAlert(
           "Session Expired",
-          "This account has been logged in from another device. You have been automatically logged out.",
+          "Logged in from another device.",
           "error",
         );
         await signOut(auth);
@@ -1011,9 +577,6 @@ function startSessionHeartbeat(uid) {
         document.getElementById("auth-screen")?.classList.remove("hidden");
         document.getElementById("dashboard")?.classList.add("hidden");
         hideNotificationBell();
-        document
-          .querySelectorAll(".modal")
-          .forEach((modal) => modal.classList.add("hidden"));
         if (participantsUnsubscribe) participantsUnsubscribe();
         if (notificationsUnsubscribe) notificationsUnsubscribe();
         if (donationsUnsubscribe) donationsUnsubscribe();
@@ -1261,26 +824,13 @@ function updateUIWithUserData(user) {
   ssv("prof-gender", user.gender || "Male");
   ssv("prof-address", user.address);
   ssv("vol-name", user.name);
-  const ee = document.getElementById("prof-email");
-  if (ee) {
-    ee.disabled = true;
-    ee.classList.add("bg-gray-100", "cursor-not-allowed");
-  }
-  const ge = document.getElementById("prof-gender");
-  if (ge) {
-    ge.disabled = true;
-    ge.classList.add("bg-gray-100", "cursor-not-allowed");
-  }
-  const ne = document.getElementById("prof-name");
-  if (ne) {
-    ne.disabled = true;
-    ne.classList.add("bg-gray-100", "cursor-not-allowed");
-  }
-  const ae = document.getElementById("prof-age");
-  if (ae) {
-    ae.disabled = true;
-    ae.classList.add("bg-gray-100", "cursor-not-allowed");
-  }
+  ["prof-email", "prof-gender", "prof-name", "prof-age"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled = true;
+      el.classList.add("bg-gray-100", "cursor-not-allowed");
+    }
+  });
   const pf = document.getElementById("prof-password");
   if (pf) pf.value = user.password || "";
   const fi = document.getElementById("profile-pic-input");
@@ -1322,10 +872,8 @@ window.showAlert = function (title, message, type = "success") {
     if (ib) ib.className = "p-1.5 rounded-lg text-white bg-rose-500";
     if (ic) ic.className = "fa-solid fa-circle-exclamation text-sm";
   }
-  const at = document.getElementById("alert-title");
-  if (at) at.innerText = title;
-  const am = document.getElementById("alert-message");
-  if (am) am.innerText = message;
+  document.getElementById("alert-title").innerText = title;
+  document.getElementById("alert-message").innerText = message;
   ae.classList.remove("translate-x-96", "opacity-0", "pointer-events-none");
   ae.classList.add("translate-x-0", "opacity-100");
   alertTimeout = setTimeout(() => window.closeCustomAlert(), 4000);
@@ -1338,12 +886,9 @@ window.closeCustomAlert = function () {
   }
 };
 window.showConfirmPopup = function (title, text, cb) {
-  const ct = document.getElementById("confirm-title"),
-    cm = document.getElementById("confirm-msg"),
-    cmod = document.getElementById("confirm-modal");
-  if (ct) ct.innerText = title;
-  if (cm) cm.innerText = text;
-  if (cmod) cmod.classList.remove("hidden");
+  document.getElementById("confirm-title").innerText = title;
+  document.getElementById("confirm-msg").innerText = text;
+  document.getElementById("confirm-modal").classList.remove("hidden");
   pendingConfirmCallback = cb;
 };
 
@@ -1375,24 +920,26 @@ async function setUserStatus(uid, status) {
 async function loadUserRegisteredEvents() {
   if (!loggedInUser?.id) return;
   try {
-    const q1 = query(
-      collection(db, "participants"),
-      where("residentId", "==", loggedInUser.id),
-      where("status", "==", STATUS.REGISTERED),
+    const s1 = await getDocs(
+      query(
+        collection(db, "participants"),
+        where("residentId", "==", loggedInUser.id),
+        where("status", "==", STATUS.REGISTERED),
+      ),
     );
-    const s1 = await getDocs(q1);
     registeredEventIds.clear();
     s1.forEach((d) => registeredEventIds.add(d.data().eventId));
     sessionStorage.setItem(
       "registeredEvents",
       JSON.stringify([...registeredEventIds]),
     );
-    const q2 = query(
-      collection(db, "participants"),
-      where("residentId", "==", loggedInUser.id),
-      where("status", "==", STATUS.COMPLETED),
+    const s2 = await getDocs(
+      query(
+        collection(db, "participants"),
+        where("residentId", "==", loggedInUser.id),
+        where("status", "==", STATUS.COMPLETED),
+      ),
     );
-    const s2 = await getDocs(q2);
     completedEventIds.clear();
     s2.forEach((d) => completedEventIds.add(d.data().eventId));
     sessionStorage.setItem(
@@ -1407,31 +954,33 @@ async function loadUserRegisteredEvents() {
 function setupParticipantsListener() {
   if (!loggedInUser?.id) return;
   if (participantsUnsubscribe) participantsUnsubscribe();
-  const q = query(
-    collection(db, "participants"),
-    where("residentId", "==", loggedInUser.id),
+  participantsUnsubscribe = onSnapshot(
+    query(
+      collection(db, "participants"),
+      where("residentId", "==", loggedInUser.id),
+    ),
+    (snap) => {
+      registeredEventIds.clear();
+      completedEventIds.clear();
+      snap.forEach((d) => {
+        const data = d.data();
+        if (data.status === STATUS.REGISTERED)
+          registeredEventIds.add(data.eventId);
+        else if (data.status === STATUS.COMPLETED)
+          completedEventIds.add(data.eventId);
+      });
+      sessionStorage.setItem(
+        "registeredEvents",
+        JSON.stringify([...registeredEventIds]),
+      );
+      sessionStorage.setItem(
+        "completedEvents",
+        JSON.stringify([...completedEventIds]),
+      );
+      if (typeof renderEvents === "function") renderEvents();
+      if (typeof renderMyEvents === "function") renderMyEvents();
+    },
   );
-  participantsUnsubscribe = onSnapshot(q, (snap) => {
-    registeredEventIds.clear();
-    completedEventIds.clear();
-    snap.forEach((d) => {
-      const data = d.data();
-      if (data.status === STATUS.REGISTERED)
-        registeredEventIds.add(data.eventId);
-      else if (data.status === STATUS.COMPLETED)
-        completedEventIds.add(data.eventId);
-    });
-    sessionStorage.setItem(
-      "registeredEvents",
-      JSON.stringify([...registeredEventIds]),
-    );
-    sessionStorage.setItem(
-      "completedEvents",
-      JSON.stringify([...completedEventIds]),
-    );
-    if (typeof renderEvents === "function") renderEvents();
-    if (typeof renderMyEvents === "function") renderMyEvents();
-  });
 }
 
 // ===== AUTH PANELS =====
@@ -1557,8 +1106,7 @@ document.getElementById("login-form")?.addEventListener("submit", async (e) => {
       await signOut(auth);
       return;
     }
-    const sessionValid = await enforceSingleSession(uc.user.uid);
-    if (!sessionValid) {
+    if (!(await enforceSingleSession(uc.user.uid))) {
       hideLoading();
       return;
     }
@@ -1592,7 +1140,7 @@ document.getElementById("login-form")?.addEventListener("submit", async (e) => {
   }
 });
 
-// ===== INITIALIZE ALL REAL-TIME LISTENERS FOR USER DATA =====
+// ===== INITIALIZE ALL REAL-TIME LISTENERS =====
 function initializeAllUserListeners() {
   if (!loggedInUser?.id) return;
   if (donationsUnsubscribe) donationsUnsubscribe();
@@ -1608,31 +1156,25 @@ function initializeAllUserListeners() {
         return;
       }
       const donations = [];
-      snap.forEach((d) => {
-        donations.push({ id: d.id, ...d.data() });
-      });
+      snap.forEach((d) => donations.push({ id: d.id, ...d.data() }));
       donations.sort((a, b) => {
-        const timeA = a.createdAt?.toDate
+        const ta = a.createdAt?.toDate
           ? a.createdAt.toDate()
           : new Date(a.createdAt || 0);
-        const timeB = b.createdAt?.toDate
+        const tb = b.createdAt?.toDate
           ? b.createdAt.toDate()
           : new Date(b.createdAt || 0);
-        return timeB - timeA;
+        return tb - ta;
       });
       let html = "";
       donations.forEach((data) => {
-        let statusBadge = "";
-        if (data.status === STATUS.APPROVED)
-          statusBadge =
-            '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800">✓ Confirmed</span>';
-        else if (data.status === STATUS.REJECTED)
-          statusBadge =
-            '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>';
-        else
-          statusBadge =
-            '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
-        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.item || ""}</td><td class="px-3 py-2 text-xs">${data.purpose || ""}</td><td class="px-3 py-2 text-xs">${data.amount ? "₱" + parseFloat(data.amount).toLocaleString() : data.item || ""}</td><td class="px-3 py-2">${statusBadge}</td><td class="px-3 py-2 text-xs text-gray-400">${data.createdAt ? formatShortDate(data.createdAt) : "N/A"}</td></tr>`;
+        let badge =
+          data.status === STATUS.APPROVED
+            ? '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800">✓ Confirmed</span>'
+            : data.status === STATUS.REJECTED
+              ? '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>'
+              : '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
+        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.item || ""}</td><td class="px-3 py-2 text-xs">${data.purpose || ""}</td><td class="px-3 py-2 text-xs">${data.amount ? "₱" + parseFloat(data.amount).toLocaleString() : data.item || ""}</td><td class="px-3 py-2">${badge}</td><td class="px-3 py-2 text-xs text-gray-400">${data.createdAt ? formatShortDate(data.createdAt) : "N/A"}</td></tr>`;
       });
       tbody.innerHTML = html;
     },
@@ -1651,31 +1193,25 @@ function initializeAllUserListeners() {
         return;
       }
       const volunteers = [];
-      snap.forEach((d) => {
-        volunteers.push({ id: d.id, ...d.data() });
-      });
+      snap.forEach((d) => volunteers.push({ id: d.id, ...d.data() }));
       volunteers.sort((a, b) => {
-        const timeA = a.createdAt?.toDate
+        const ta = a.createdAt?.toDate
           ? a.createdAt.toDate()
           : new Date(a.createdAt || 0);
-        const timeB = b.createdAt?.toDate
+        const tb = b.createdAt?.toDate
           ? b.createdAt.toDate()
           : new Date(b.createdAt || 0);
-        return timeB - timeA;
+        return tb - ta;
       });
       let html = "";
       volunteers.forEach((data) => {
-        let statusBadge = "";
-        if (data.status === STATUS.APPROVED)
-          statusBadge =
-            '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800">✓ Approved</span>';
-        else if (data.status === STATUS.REJECTED)
-          statusBadge =
-            '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>';
-        else
-          statusBadge =
-            '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
-        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.skills || ""}</td><td class="px-3 py-2 text-xs">${data.availability || ""}</td><td class="px-3 py-2">${statusBadge}</td><td class="px-3 py-2 text-xs text-gray-400">${data.createdAt ? formatShortDate(data.createdAt) : "N/A"}</td></tr>`;
+        let badge =
+          data.status === STATUS.APPROVED
+            ? '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800">✓ Approved</span>'
+            : data.status === STATUS.REJECTED
+              ? '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>'
+              : '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
+        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.skills || ""}</td><td class="px-3 py-2 text-xs">${data.availability || ""}</td><td class="px-3 py-2">${badge}</td><td class="px-3 py-2 text-xs text-gray-400">${data.createdAt ? formatShortDate(data.createdAt) : "N/A"}</td></tr>`;
       });
       tbody.innerHTML = html;
     },
@@ -1708,13 +1244,13 @@ function initNotificationsListener() {
         if (!notif.read) notificationCount++;
       });
       allNotifications.sort((a, b) => {
-        const timeA = a.createdAt?.toDate
+        const ta = a.createdAt?.toDate
           ? a.createdAt.toDate()
           : new Date(a.createdAt || 0);
-        const timeB = b.createdAt?.toDate
+        const tb = b.createdAt?.toDate
           ? b.createdAt.toDate()
           : new Date(b.createdAt || 0);
-        return timeB - timeA;
+        return tb - ta;
       });
       updateNotificationBadge();
       renderNotificationDropdown();
@@ -1723,8 +1259,8 @@ function initNotificationsListener() {
   );
 }
 function updateNotificationBadge() {
-  const badge = document.getElementById("notification-count-badge");
-  const mBadge = document.getElementById("mobile-notification-count-badge");
+  const badge = document.getElementById("notification-count-badge"),
+    mBadge = document.getElementById("mobile-notification-count-badge");
   if (badge) {
     if (notificationCount > 0) {
       badge.textContent = notificationCount > 99 ? "99+" : notificationCount;
@@ -1744,8 +1280,8 @@ function updateNotificationBadge() {
 }
 function renderNotificationDropdown() {
   const container = document.getElementById("notification-dropdown-list"),
-    unreadSpan = document.getElementById("dropdown-unread-count"),
-    toggleBtn = document.getElementById("notification-toggle-more-btn"),
+    unreadSpan = document.getElementById("dropdown-unread-count");
+  const toggleBtn = document.getElementById("notification-toggle-more-btn"),
     dropdown = document.getElementById("notification-dropdown");
   if (!container) return;
   if (unreadSpan) {
@@ -1762,7 +1298,7 @@ function renderNotificationDropdown() {
     return;
   }
   if (toggleBtn) toggleBtn.classList.remove("hidden");
-  const notificationsToShow = showingAllNotifications
+  const toShow = showingAllNotifications
     ? allNotifications
     : allNotifications.slice(0, 5);
   const hasMore = allNotifications.length > 5;
@@ -1778,9 +1314,8 @@ function renderNotificationDropdown() {
     dropdown.style.maxHeight = showingAllNotifications ? "85vh" : "60vh";
     container.style.maxHeight = showingAllNotifications ? "75vh" : "50vh";
   }
-
   let html = "";
-  notificationsToShow.forEach((notif) => {
+  toShow.forEach((notif) => {
     let iconBg = "bg-blue-50 text-blue-600",
       icon = "fa-bell";
     switch (notif.type) {
@@ -1804,12 +1339,16 @@ function renderNotificationDropdown() {
         iconBg = "bg-purple-50 text-purple-600";
         icon = "fa-clock";
         break;
+      case "contact_status_update":
+        iconBg = "bg-indigo-50 text-indigo-600";
+        icon = "fa-envelope-circle-check";
+        break;
     }
-    const isUnread = !notif.read;
-    const timeDisplay = notif.createdAt
-      ? formatRelativeTime(notif.createdAt)
-      : "Just now";
-    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || "default"}')" class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"} border-b border-gray-100 last:border-b-0 group"><div class="flex items-start space-x-3"><div class="w-10 h-10 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform"><i class="fa-solid ${icon} text-sm"></i></div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-2"><p class="text-sm font-semibold text-gray-800 truncate group-hover:text-tsu-blue transition-colors">${notif.title || "Notification"}</p>${isUnread ? '<div class="w-2.5 h-2.5 bg-blue-500 rounded-full shrink-0 animate-pulse"></div>' : ""}</div><p class="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed">${notif.message || ""}</p><div class="flex items-center justify-between mt-2"><p class="text-[10px] text-gray-400 flex items-center"><i class="fa-solid fa-clock mr-1"></i>${timeDisplay}</p><span class="text-[10px] text-tsu-blue font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center">Tap to view <i class="fa-solid fa-arrow-right ml-0.5 text-[9px]"></i></span></div></div></div></div>`;
+    const isUnread = !notif.read,
+      timeDisplay = notif.createdAt
+        ? formatRelativeTime(notif.createdAt)
+        : "Just now";
+    html += `<div onclick="window.handleNotificationClick('${notif.id}','${notif.type || "default"}')" class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"} border-b border-gray-100 last:border-b-0 group"><div class="flex items-start space-x-3"><div class="w-10 h-10 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm group-hover:scale-110 transition-transform"><i class="fa-solid ${icon} text-sm"></i></div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-2"><p class="text-sm font-semibold text-gray-800 truncate group-hover:text-tsu-blue transition-colors">${notif.title || "Notification"}</p>${isUnread ? '<div class="w-2.5 h-2.5 bg-blue-500 rounded-full shrink-0 animate-pulse"></div>' : ""}</div><p class="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed">${notif.message || ""}</p><div class="flex items-center justify-between mt-2"><p class="text-[10px] text-gray-400 flex items-center"><i class="fa-solid fa-clock mr-1"></i>${timeDisplay}</p><span class="text-[10px] text-tsu-blue font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center">Tap to view <i class="fa-solid fa-arrow-right ml-0.5 text-[9px]"></i></span></div></div></div></div>`;
   });
   container.innerHTML = html;
 }
@@ -1818,99 +1357,71 @@ window.toggleMoreNotifications = function () {
   renderNotificationDropdown();
 };
 window.toggleNotificationDropdown = function () {
-  const dropdown = document.getElementById("notification-dropdown");
-  const bellBtn = document.getElementById("notification-bell-btn");
+  const dropdown = document.getElementById("notification-dropdown"),
+    bellBtn = document.getElementById("notification-bell-btn");
   if (!dropdown || !bellBtn) return;
   if (dropdown.classList.contains("hidden")) {
-    const rect = bellBtn.getBoundingClientRect();
-    const dropdownWidth = 320;
-    const viewportWidth = window.innerWidth;
-
-    let leftPosition = rect.right + 15;
-    if (leftPosition + dropdownWidth > viewportWidth) {
-      leftPosition = viewportWidth - dropdownWidth - 10;
-    }
-
-    let topPosition = rect.bottom + 8;
-    dropdown.style.position = "fixed";
-    dropdown.style.top = topPosition + "px";
-    dropdown.style.left = leftPosition + "px";
-    dropdown.style.right = "auto";
-    dropdown.style.bottom = "auto";
-    dropdown.style.transform = "none";
-    dropdown.style.width = dropdownWidth + "px";
-
+    const rect = bellBtn.getBoundingClientRect(),
+      dw = 320,
+      vw = window.innerWidth;
+    let lp = rect.right + 15;
+    if (lp + dw > vw) lp = vw - dw - 10;
+    dropdown.style.cssText = `position:fixed;top:${rect.bottom + 8}px;left:${lp}px;right:auto;bottom:auto;transform:none;width:${dw}px`;
     showingAllNotifications = false;
     renderNotificationDropdown();
     dropdown.classList.remove("hidden");
-    setTimeout(() => {
-      document.addEventListener("click", closeNotificationOnClickOutside);
-    }, 100);
+    setTimeout(
+      () => document.addEventListener("click", closeNotificationOnClickOutside),
+      100,
+    );
   } else {
     closeNotificationDropdown();
   }
 };
 function closeNotificationDropdown() {
-  const dropdown = document.getElementById("notification-dropdown");
-  if (dropdown) {
-    dropdown.classList.add("hidden");
+  const d = document.getElementById("notification-dropdown");
+  if (d) {
+    d.classList.add("hidden");
     showingAllNotifications = false;
   }
   document.removeEventListener("click", closeNotificationOnClickOutside);
 }
 function closeNotificationOnClickOutside(e) {
-  const dropdown = document.getElementById("notification-dropdown");
-  const bellBtn = document.getElementById("notification-bell-btn");
+  const d = document.getElementById("notification-dropdown"),
+    b = document.getElementById("notification-bell-btn");
   if (
-    dropdown &&
-    !dropdown.classList.contains("hidden") &&
-    !dropdown.contains(e.target) &&
-    bellBtn &&
-    !bellBtn.contains(e.target)
-  ) {
+    d &&
+    !d.classList.contains("hidden") &&
+    !d.contains(e.target) &&
+    b &&
+    !b.contains(e.target)
+  )
     closeNotificationDropdown();
-  }
 }
 window.handleNotificationClick = async function (notifId, type) {
+  const notif = allNotifications.find((n) => n.id === notifId);
+  // Open notification detail overlay
+  if (notif) {
+    window.openNotificationDetail(
+      notifId,
+      type || "default",
+      notif.title || "Notification",
+      notif.message || "",
+      notif.createdAt ? formatRelativeTime(notif.createdAt) : "Just now",
+    );
+  }
   await window.markNotificationAsRead(notifId);
   closeNotificationDropdown();
   closeMobileNotificationDropdown();
-  switch (type) {
-    case "volunteer_approved":
-    case "volunteer_rejected":
-      window.switchTab("volunteers");
-      break;
-    case "donation_confirmed":
-    case "donation_rejected":
-      window.switchTab("donations");
-      break;
-    case "hours_credited":
-      window.switchTab("hours");
-      break;
-    default:
-      window.switchTab("notifications");
-      break;
-  }
-  const notif = allNotifications.find((n) => n.id === notifId);
-  if (notif)
-    setTimeout(() => {
-      window.showAlert(
-        notif.title || "Notification",
-        notif.message || "",
-        "success",
-      );
-    }, 500);
 };
 window.markNotificationAsRead = async function (notifId) {
   try {
     await updateDoc(doc(db, "notifications", notifId), { read: true });
-  } catch (e) {
-    console.error("Error marking notification as read:", e);
-  }
+  } catch (e) {}
 };
 window.markAllNotificationsAsRead = async function () {
   if (!loggedInUser?.id) return;
-  window.showLoading();
+  showLoading();
   try {
     const snap = await getDocs(
       query(
@@ -1924,55 +1435,58 @@ window.markAllNotificationsAsRead = async function () {
       snap.forEach((d) => batch.update(d.ref, { read: true }));
       await batch.commit();
     }
-    window.hideLoading();
+    hideLoading();
     window.showAlert("Success", "All notifications marked as read.", "success");
   } catch (e) {
-    window.hideLoading();
-    console.error("Error marking all as read:", e);
+    hideLoading();
   }
 };
 
-let mobileShowingAllNotifications = false;
+// ===== MOBILE NOTIFICATION FUNCTIONS =====
 window.toggleMobileNotificationDropdown = function () {
-  const dropdown = document.getElementById("mobile-notification-dropdown");
-  const bellBtn = document.getElementById("mobile-notification-bell-btn");
-  const desktopDropdown = document.getElementById("notification-dropdown");
+  const dropdown = document.getElementById("mobile-notification-dropdown"),
+    bellBtn = document.getElementById("mobile-notification-bell-btn");
   if (!dropdown || !bellBtn) return;
-  if (desktopDropdown && !desktopDropdown.classList.contains("hidden")) {
-    desktopDropdown.classList.add("hidden");
+  const dd = document.getElementById("notification-dropdown");
+  if (dd && !dd.classList.contains("hidden")) {
+    dd.classList.add("hidden");
     showingAllNotifications = false;
   }
   if (dropdown.classList.contains("hidden")) {
     mobileShowingAllNotifications = false;
     renderMobileNotificationDropdown();
     dropdown.classList.remove("hidden");
-    setTimeout(() => {
-      document.addEventListener("click", closeMobileNotificationOnClickOutside);
-    }, 100);
+    setTimeout(
+      () =>
+        document.addEventListener(
+          "click",
+          closeMobileNotificationOnClickOutside,
+        ),
+      100,
+    );
   } else {
     closeMobileNotificationDropdown();
   }
 };
 function closeMobileNotificationDropdown() {
-  const dropdown = document.getElementById("mobile-notification-dropdown");
-  if (dropdown) {
-    dropdown.classList.add("hidden");
+  const d = document.getElementById("mobile-notification-dropdown");
+  if (d) {
+    d.classList.add("hidden");
     mobileShowingAllNotifications = false;
   }
   document.removeEventListener("click", closeMobileNotificationOnClickOutside);
 }
 function closeMobileNotificationOnClickOutside(e) {
-  const dropdown = document.getElementById("mobile-notification-dropdown");
-  const bellBtn = document.getElementById("mobile-notification-bell-btn");
+  const d = document.getElementById("mobile-notification-dropdown"),
+    b = document.getElementById("mobile-notification-bell-btn");
   if (
-    dropdown &&
-    !dropdown.classList.contains("hidden") &&
-    !dropdown.contains(e.target) &&
-    bellBtn &&
-    !bellBtn.contains(e.target)
-  ) {
+    d &&
+    !d.classList.contains("hidden") &&
+    !d.contains(e.target) &&
+    b &&
+    !b.contains(e.target)
+  )
     closeMobileNotificationDropdown();
-  }
 }
 function renderMobileNotificationDropdown() {
   const container = document.getElementById(
@@ -1996,7 +1510,7 @@ function renderMobileNotificationDropdown() {
     return;
   }
   if (toggleBtn) toggleBtn.classList.remove("hidden");
-  const notificationsToShow = mobileShowingAllNotifications
+  const toShow = mobileShowingAllNotifications
     ? allNotifications
     : allNotifications.slice(0, 5);
   const hasMore = allNotifications.length > 5;
@@ -2013,7 +1527,7 @@ function renderMobileNotificationDropdown() {
     container.style.maxHeight = mobileShowingAllNotifications ? "75vh" : "50vh";
   }
   let html = "";
-  notificationsToShow.forEach((notif) => {
+  toShow.forEach((notif) => {
     let iconBg = "bg-blue-50 text-blue-600",
       icon = "fa-bell";
     switch (notif.type) {
@@ -2037,12 +1551,16 @@ function renderMobileNotificationDropdown() {
         iconBg = "bg-purple-50 text-purple-600";
         icon = "fa-clock";
         break;
+      case "contact_status_update":
+        iconBg = "bg-indigo-50 text-indigo-600";
+        icon = "fa-envelope-circle-check";
+        break;
     }
-    const isUnread = !notif.read;
-    const timeDisplay = notif.createdAt
-      ? formatRelativeTime(notif.createdAt)
-      : "Just now";
-    html += `<div onclick="window.handleNotificationClick('${notif.id}', '${notif.type || "default"}'); closeMobileNotificationDropdown();" class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30 hover:bg-blue-50/50" : "hover:bg-gray-50"} border-b border-gray-100 last:border-b-0"><div class="flex items-start space-x-3"><div class="w-9 h-9 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm"><i class="fa-solid ${icon} text-xs"></i></div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-2"><p class="text-xs font-semibold text-gray-800 truncate">${notif.title || "Notification"}</p>${isUnread ? '<div class="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>' : ""}</div><p class="text-[11px] text-gray-600 mt-0.5 line-clamp-2 leading-relaxed">${notif.message || ""}</p><p class="text-[9px] text-gray-400 mt-1.5 flex items-center"><i class="fa-solid fa-clock mr-1"></i>${timeDisplay}</p></div></div></div>`;
+    const isUnread = !notif.read,
+      timeDisplay = notif.createdAt
+        ? formatRelativeTime(notif.createdAt)
+        : "Just now";
+    html += `<div onclick="window.handleNotificationClick('${notif.id}','${notif.type || "default"}'); closeMobileNotificationDropdown();" class="p-4 hover:bg-gray-100 cursor-pointer transition-all duration-200 ${isUnread ? "bg-blue-50/30" : "hover:bg-gray-50"} border-b border-gray-100"><div class="flex items-start space-x-3"><div class="w-9 h-9 ${iconBg} rounded-full flex items-center justify-center shrink-0 shadow-sm"><i class="fa-solid ${icon} text-xs"></i></div><div class="flex-1 min-w-0"><div class="flex items-center justify-between gap-2"><p class="text-xs font-semibold text-gray-800 truncate">${notif.title || "Notification"}</p>${isUnread ? '<div class="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>' : ""}</div><p class="text-[11px] text-gray-600 mt-0.5 line-clamp-2">${notif.message || ""}</p><p class="text-[9px] text-gray-400 mt-1.5"><i class="fa-solid fa-clock mr-1"></i>${timeDisplay}</p></div></div></div>`;
   });
   container.innerHTML = html;
 }
@@ -2051,7 +1569,7 @@ window.toggleMoreMobileNotifications = function () {
   renderMobileNotificationDropdown();
 };
 
-// ===== DISABLE/ENABLE PROFILE FIELDS =====
+// ===== PROFILE FIELDS =====
 function disableAllProfileFields() {
   [
     "prof-name",
@@ -2066,11 +1584,13 @@ function disableAllProfileFields() {
       el.classList.add("bg-gray-100", "cursor-not-allowed", "opacity-60");
     }
   });
-  const ge = document.getElementById("prof-gender");
-  if (ge) {
-    ge.disabled = true;
-    ge.classList.add("bg-gray-100", "cursor-not-allowed");
-  }
+  ["prof-gender"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled = true;
+      el.classList.add("bg-gray-100", "cursor-not-allowed");
+    }
+  });
   const ut = document.getElementById("upload-trigger");
   if (ut) {
     ut.style.pointerEvents = "none";
@@ -2082,10 +1602,8 @@ function disableAllProfileFields() {
     ip.style.opacity = "1";
     ip.style.border = "3px solid rgba(10,41,71,0.15)";
   }
-  const rb = document.getElementById("remove-profile-pic-btn");
-  if (rb) rb.classList.add("hidden");
-  const pi = document.getElementById("profile-pic-pending");
-  if (pi) pi.classList.add("hidden");
+  document.getElementById("remove-profile-pic-btn")?.classList.add("hidden");
+  document.getElementById("profile-pic-pending")?.classList.add("hidden");
   const tb = document.getElementById("toggle-prof-password");
   if (tb) {
     tb.disabled = true;
@@ -2106,7 +1624,6 @@ function updateEditButtonText() {
   ab.setAttribute("onclick", "toggleEditMode()");
   ab.disabled = false;
 }
-
 function enableAllProfileFields() {
   ["prof-phone", "prof-address", "prof-password"].forEach((id) => {
     const el = document.getElementById(id);
@@ -2123,8 +1640,8 @@ function enableAllProfileFields() {
   }
   const ip = document.getElementById("profile-img-preview");
   if (ip) ip.style.opacity = "1";
-  const hasPic = loggedInUser?.profilePic && loggedInUser.profilePic !== "";
-  const hasPend = selectedProfilePicFile instanceof File;
+  const hasPic = loggedInUser?.profilePic && loggedInUser.profilePic !== "",
+    hasPend = selectedProfilePicFile instanceof File;
   const rb = document.getElementById("remove-profile-pic-btn");
   if (rb && (hasPic || hasPend || (ip && !ip.classList.contains("hidden"))))
     rb.classList.remove("hidden");
@@ -2136,8 +1653,6 @@ function enableAllProfileFields() {
   const fi = document.getElementById("profile-pic-input");
   if (fi) fi.disabled = false;
 }
-
-// ===== TOGGLE EDIT MODE =====
 window.toggleEditMode = function () {
   const ab = document.getElementById("profile-action-btn");
   if (!ab) return;
@@ -2152,8 +1667,7 @@ window.toggleEditMode = function () {
       ab.setAttribute("data-mode", "save");
       ab.setAttribute("onclick", "saveProfileChanges()");
       ab.disabled = false;
-      const cb = document.getElementById("cancel-edit-btn");
-      if (cb) cb.classList.remove("hidden");
+      document.getElementById("cancel-edit-btn")?.classList.remove("hidden");
       hideLoading();
       window.showAlert(
         "Edit Mode",
@@ -2167,15 +1681,12 @@ window.cancelEdit = function () {
   showLoading("Cancelling...");
   setTimeout(() => {
     selectedProfilePicFile = undefined;
-    const pi = document.getElementById("profile-pic-pending");
-    if (pi) pi.classList.add("hidden");
+    document.getElementById("profile-pic-pending")?.classList.add("hidden");
     const fi = document.getElementById("profile-pic-input");
     if (fi) fi.value = "";
     if (loggedInUser) updateUIWithUserData(loggedInUser);
     disableAllProfileFields();
-
-    const cb = document.getElementById("cancel-edit-btn");
-    if (cb) cb.classList.add("hidden");
+    document.getElementById("cancel-edit-btn")?.classList.add("hidden");
     const ab = document.getElementById("profile-action-btn");
     if (ab) {
       ab.innerHTML =
@@ -2185,12 +1696,11 @@ window.cancelEdit = function () {
       ab.setAttribute("data-mode", "edit");
       ab.setAttribute("onclick", "toggleEditMode()");
     }
-
     hideLoading();
     window.showAlert("Cancelled", "Changes discarded.", "success");
+    const profPassword = document.getElementById('prof-password').type = 'password';
   }, 400);
 };
-
 window.saveProfileChanges = function () {
   showLoading("Saving...");
   setTimeout(() => {
@@ -2206,7 +1716,7 @@ window.saveProfileChanges = function () {
   }, 300);
 };
 
-// ===== PROFILE MANAGEMENT =====
+// ===== PROFILE FORM =====
 const profileForm = document.getElementById("profile-form");
 if (profileForm) {
   profileForm.addEventListener("submit", async (e) => {
@@ -2214,34 +1724,27 @@ if (profileForm) {
     const ab = document.getElementById("profile-action-btn");
     if (!ab || ab.getAttribute("data-mode") !== "save") return;
     if (isSaving || !loggedInUser?.id) return;
-
-    const phone = document.getElementById("prof-phone")?.value.trim() || "";
-    const address = document.getElementById("prof-address")?.value.trim() || "";
+    const phone = document.getElementById("prof-phone")?.value.trim() || "",
+      address = document.getElementById("prof-address")?.value.trim() || "";
     const pi = document.getElementById("prof-password");
     const password =
       pi && pi.value.trim() !== "" ? pi.value.trim() : loggedInUser.password;
-
-    const hasNonPwdChanges =
+    const hasNonPwd =
       phone !== (loggedInUser.phone || "") ||
       address !== (loggedInUser.address || "");
-    const hasPwdChange = password !== (loggedInUser.password || "");
-    const hasInfoChanges = hasNonPwdChanges || hasPwdChange;
-    const hasPicChange = selectedProfilePicFile !== undefined;
-    const isNewPic = selectedProfilePicFile instanceof File;
-    const isRemoving = selectedProfilePicFile === null;
-
-    if (!hasInfoChanges && !hasPicChange) {
+    const hasPwd = password !== (loggedInUser.password || ""),
+      hasInfo = hasNonPwd || hasPwd;
+    const hasPic = selectedProfilePicFile !== undefined,
+      isNewPic = selectedProfilePicFile instanceof File,
+      isRemoving = selectedProfilePicFile === null;
+    if (!hasInfo && !hasPic) {
       window.showAlert("No Changes", "Nothing to save.", "error");
       return;
     }
-
-    if (hasNonPwdChanges) {
-      if (phone && !/^09\d{9}$/.test(phone)) {
-        window.showAlert("Error", "Invalid phone.", "error");
-        return;
-      }
+    if (hasNonPwd && phone && !/^09\d{9}$/.test(phone)) {
+      window.showAlert("Error", "Invalid phone.", "error");
+      return;
     }
-
     isSaving = true;
     showLoading("Saving...");
     if (ab) {
@@ -2253,7 +1756,7 @@ if (profileForm) {
       const ud = {},
         su = {},
         now = new Date();
-      if (hasPicChange) {
+      if (hasPic) {
         if (isNewPic) {
           const pic = await uploadProfilePicture(
             loggedInUser.id,
@@ -2266,10 +1769,10 @@ if (profileForm) {
           su.profilePic = "";
         }
       }
-      if (hasInfoChanges) {
-        if (hasPwdChange && auth.currentUser)
+      if (hasInfo) {
+        if (hasPwd && auth.currentUser)
           await updatePassword(auth.currentUser, password);
-        if (hasNonPwdChanges) {
+        if (hasNonPwd) {
           ud.phone = phone;
           ud.address = address;
           ud.lastProfileUpdate = serverTimestamp();
@@ -2286,19 +1789,15 @@ if (profileForm) {
         Object.assign(loggedInUser, su);
         saveUserSession(loggedInUser);
       }
-
       selectedProfilePicFile = undefined;
       updateUIWithUserData(loggedInUser);
       disableAllProfileFields();
       hideLoading();
-
-      const cb = document.getElementById("cancel-edit-btn");
-      if (cb) cb.classList.add("hidden");
-      let msg = hasNonPwdChanges ? "Profile updated" : "";
-      if (hasPwdChange) msg += (msg ? " & " : "") + "password changed";
+      document.getElementById("cancel-edit-btn")?.classList.add("hidden");
+      let msg = hasNonPwd ? "Profile updated" : "";
+      if (hasPwd) msg += (msg ? " & " : "") + "password changed";
       if (isNewPic) msg += (msg ? " & " : "") + "picture updated";
       if (isRemoving) msg += (msg ? " & " : "") + "picture removed";
-
       window.showAlert("Success!", msg + "! Fields locked.", "success");
       document.getElementById("prof-password").type = "password";
     } catch (error) {
@@ -2316,7 +1815,7 @@ if (profileForm) {
   });
 }
 
-// ===== PASSWORD TOGGLE =====
+// ===== PASSWORD TOGGLE & CONFIRM BUTTONS =====
 document
   .getElementById("toggle-prof-password")
   ?.addEventListener("click", function () {
@@ -2353,13 +1852,13 @@ document
 onSnapshot(
   query(collection(db, "announcements"), orderBy("createdAt", "desc")),
   (snap) => {
-    const container = document.getElementById("announcements-container");
-    const publicContainer = document.getElementById(
-      "public-announcements-container",
-    );
+    const container = document.getElementById("announcements-container"),
+      publicContainer = document.getElementById(
+        "public-announcements-container",
+      );
+    const emptyHtml =
+      '<div class="text-center py-10 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-bullhorn text-2xl text-gray-300"></i></div><p class="text-base text-gray-400">No announcements yet.</p></div>';
     if (snap.empty) {
-      const emptyHtml =
-        '<div class="text-center py-16 bg-white rounded-xl border shadow-sm"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-bullhorn text-2xl text-gray-300"></i></div><p class="text-base text-gray-400">No announcements yet.</p></div>';
       if (container) container.innerHTML = emptyHtml;
       if (publicContainer) publicContainer.innerHTML = emptyHtml;
       return;
@@ -2378,20 +1877,16 @@ onSnapshot(
         badgeClass = "bg-red-100 text-red-700";
         badgeIcon = "fa-triangle-exclamation";
       }
-      const relativeTime = a.createdAt
-        ? formatRelativeTime(a.createdAt)
-        : "Recently";
-      const exactTime = a.createdAt
-        ? formatFullDateTime(a.createdAt)
-        : "Recently";
-      const escT = (a.title || "").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-      const escD = (a.desc || "")
-        .replace(/'/g, "\\'")
-        .replace(/"/g, "&quot;")
-        .replace(/\n/g, "\\n");
-      const escP = (a.priority || "Notice").replace(/'/g, "\\'");
-      const escDt = exactTime.replace(/'/g, "\\'");
-      html += `<div onclick="openAnnouncementDetails('${annId}','${escT}','${escD}','${escP}','${escDt}')" class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"><div class="p-5 sm:p-6"><div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-gradient-to-br from-tsu-blue to-tsu-dark rounded-xl flex items-center justify-center shadow-sm shrink-0"><i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i></div><div class="min-w-0"><h4 class="font-bold text-sm text-gray-900">Municipality of Victoria</h4><div class="flex items-center space-x-2 mt-1"><span class="text-[11px] text-gray-400" title="${exactTime}"><i class="fa-solid fa-clock mr-1"></i>${relativeTime}</span><span class="text-[11px] px-2 py-0.5 rounded-full font-bold ${badgeClass}"><i class="fa-solid ${badgeIcon} mr-1 text-[10px]"></i>${a.priority || "Notice"}</span></div></div></div></div><h3 class="text-base sm:text-lg font-extrabold text-gray-900 group-hover:text-tsu-blue transition-colors line-clamp-2 leading-snug mb-2">${a.title || "Untitled"}</h3><p class="text-sm text-gray-500 mt-2 line-clamp-3 leading-relaxed">${a.desc || ""}</p>${a.createdBy ? `<p class="text-xs text-gray-400 mt-3 flex items-center">` : ""}</div><div class="px-5 sm:px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between"><span class="text-[11px] text-gray-400"><i class="fa-solid fa-eye mr-1"></i>Tap to view</span></div></div>`;
+      const rt = a.createdAt ? formatRelativeTime(a.createdAt) : "Recently",
+        et = a.createdAt ? formatFullDateTime(a.createdAt) : "Recently";
+      const escT = (a.title || "").replace(/'/g, "\\'").replace(/"/g, "&quot;"),
+        escD = (a.desc || "")
+          .replace(/'/g, "\\'")
+          .replace(/"/g, "&quot;")
+          .replace(/\n/g, "\\n"),
+        escP = (a.priority || "Notice").replace(/'/g, "\\'"),
+        escDt = et.replace(/'/g, "\\'");
+      html += `<div onclick="openAnnouncementDetails('${annId}','${escT}','${escD}','${escP}','${escDt}')" class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"><div class="p-5 sm:p-6"><div class="flex items-center justify-between mb-3"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-gradient-to-br from-tsu-blue to-tsu-dark rounded-xl flex items-center justify-center shadow-sm shrink-0"><i class="fa-solid fa-building-columns text-tsu-gold text-sm"></i></div><div class="min-w-0"><h4 class="font-bold text-sm text-gray-900">Municipality of Victoria</h4><div class="flex items-center space-x-2 mt-1"><span class="text-[11px] text-gray-400" title="${et}"><i class="fa-solid fa-clock mr-1"></i>${rt}</span><span class="text-[11px] px-2 py-0.5 rounded-full font-bold ${badgeClass}"><i class="fa-solid ${badgeIcon} mr-1 text-[10px]"></i>${a.priority || "Notice"}</span></div></div></div></div><h3 class="text-base sm:text-lg font-extrabold text-gray-900 group-hover:text-tsu-blue transition-colors line-clamp-2 leading-snug mb-2">${a.title || "Untitled"}</h3><p class="text-sm text-gray-500 mt-2 line-clamp-3 leading-relaxed">${a.desc || ""}</p></div><div class="px-5 sm:px-6 py-3 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between"><span class="text-xs text-tsu-blue font-semibold group-hover:underline">Read More <i class="fa-solid fa-arrow-right ml-1.5 text-[11px]"></i></span></div></div>`;
     });
     if (container) container.innerHTML = html;
     if (publicContainer) publicContainer.innerHTML = html;
@@ -2420,43 +1915,100 @@ window.openAnnouncementDetails = function (annId, title, desc, priority, date) {
   window.toggleModal("view-announcement-modal");
 };
 
-// ===== EVENT CLICK HANDLERS =====
-window.handleRegisterClick = function (
-  event,
-  eventId,
-  eventTitle,
-  eventDate,
-  eventTime,
-  eventLocation,
-) {
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
-  window.confirmJoinEvent(
-    eventId,
-    eventTitle,
-    eventDate,
-    eventTime,
-    eventLocation,
-  );
+// ===== EVENT HANDLERS =====
+window.handleRegisterClick = function (e, eid, et, ed, etm, el) {
+  e.preventDefault();
+  e.stopPropagation();
+  window.confirmJoinEvent(eid, et, ed, etm, el);
   return false;
 };
-window.handleUnregisterClick = function (event, eventId, eventTitle) {
-  event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
-  window.unregisterFromEvent(eventId, eventTitle);
+window.handleUnregisterClick = function (e, eid, et) {
+  e.preventDefault();
+  e.stopPropagation();
+  window.unregisterFromEvent(eid, et);
   return false;
-};
-window.promptLoginForEvent = function () {
-  window.showAlert(
-    "Authentication Required",
-    "Please log in or create an account to join community events.",
-    "error",
-  );
 };
 
-// ===== EVENTS RENDERER =====
+// ===== RENDER EVENTS =====
+function renderPublicEvents() {
+  const grid = document.getElementById("public-events-grid");
+  if (!grid) return;
+  getDocs(query(collection(db, "events"), orderBy("date", "asc"))).then(
+    (snap) => {
+      if (snap.empty) {
+        grid.innerHTML =
+          '<div class="col-span-full text-center py-10 bg-white rounded-xl border shadow-sm"><p class="text-sm text-gray-400">No upcoming events.</p></div>';
+        return;
+      }
+      let html = "";
+      snap.forEach((d) => {
+        const ev = d.data();
+        const esc = (t) => {
+          const div = document.createElement("div");
+          div.textContent = t || "";
+          return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        };
+        const dd = ev.date || "TBA",
+          td = ev.time ? formatTimeDisplay(ev.time) : "";
+        let ti = "fa-calendar-check",
+          pg = "from-tsu-blue to-tsu-dark";
+        switch (ev.type) {
+          case "Seminar":
+            ti = "fa-chalkboard-user";
+            pg = "from-[#800000] to-[#A52A2A]";
+            break;
+          case "Workshop":
+            ti = "fa-toolbox";
+            pg = "from-[#A52A2A] to-[#8B0000]";
+            break;
+          case "Meeting":
+            ti = "fa-users";
+            pg = "from-[#B8960C] to-[#8B6914]";
+            break;
+          case "Sports":
+            ti = "fa-futbol";
+            pg = "from-[#0D3B5C] to-[#0A2947]";
+            break;
+          case "Health":
+            ti = "fa-heart-pulse";
+            pg = "from-[#8B0000] to-[#600000]";
+            break;
+          case "Training":
+            ti = "fa-graduation-cap";
+            pg = "from-[#1A5276] to-[#0A2947]";
+            break;
+          case "Celebration":
+            ti = "fa-cake-candles";
+            pg = "from-[#FFD700] to-[#B8960C]";
+            break;
+          case "Outreach":
+            ti = "fa-hand-holding-heart";
+            pg = "from-[#0A2947] to-[#1A5276]";
+            break;
+          case "Environmental":
+            ti = "fa-leaf";
+            pg = "from-[#2B0000] to-[#0A2947]";
+            break;
+          case "Cultural":
+            ti = "fa-masks-theater";
+            pg = "from-[#FFD700] to-[#CCAC00]";
+            break;
+          case "Fundraising":
+            ti = "fa-sack-dollar";
+            pg = "from-[#A52A2A] to-[#800000]";
+            break;
+        }
+        const hi = ev.imageUrl && ev.imageUrl !== "";
+        const is = hi
+          ? `<div class="relative h-40 overflow-hidden rounded-t-xl"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full"><i class="fa-solid ${ti} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
+          : `<div class="relative h-40 bg-gradient-to-br ${pg} flex items-center justify-center overflow-hidden rounded-t-xl"><i class="fa-solid ${ti} text-white/30 text-5xl"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full"><i class="fa-solid ${ti} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
+        const ab = `<button type="button" onclick="window.showAlert('Authentication Required','Please log in or create an account to join community events.','error')" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
+        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dd}','${td}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${is}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4"></i><span class="font-medium text-gray-700">${dd}</span>${td ? `<span class="text-gray-400">| ${td}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div></div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${ab}</div></div>`;
+      });
+      grid.innerHTML = html;
+    },
+  );
+}
 function renderEvents() {
   const grid = document.getElementById("events-grid");
   if (!grid) return;
@@ -2478,158 +2030,73 @@ function renderEvents() {
         };
         const isReg = registeredEventIds.has(id),
           isComp = completedEventIds.has(id);
-        const dateDisplay = ev.date || "TBA",
-          timeDisplay = ev.time ? formatTimeDisplay(ev.time) : "";
-        const hasImage = ev.imageUrl && ev.imageUrl !== "";
-        let typeIcon, placeholderGradient;
+        const dd = ev.date || "TBA",
+          td = ev.time ? formatTimeDisplay(ev.time) : "";
+        const hi = ev.imageUrl && ev.imageUrl !== "";
+        let ti, pg;
         switch (ev.type) {
           case "Seminar":
-            typeIcon = "fa-chalkboard-user";
-            placeholderGradient = "from-[#800000] to-[#A52A2A]";
+            ti = "fa-chalkboard-user";
+            pg = "from-[#800000] to-[#A52A2A]";
             break;
           case "Workshop":
-            typeIcon = "fa-toolbox";
-            placeholderGradient = "from-[#A52A2A] to-[#8B0000]";
+            ti = "fa-toolbox";
+            pg = "from-[#A52A2A] to-[#8B0000]";
             break;
           case "Meeting":
-            typeIcon = "fa-users";
-            placeholderGradient = "from-[#B8960C] to-[#8B6914]";
+            ti = "fa-users";
+            pg = "from-[#B8960C] to-[#8B6914]";
             break;
           case "Sports":
-            typeIcon = "fa-futbol";
-            placeholderGradient = "from-[#0D3B5C] to-[#0A2947]";
+            ti = "fa-futbol";
+            pg = "from-[#0D3B5C] to-[#0A2947]";
             break;
           case "Health":
-            typeIcon = "fa-heart-pulse";
-            placeholderGradient = "from-[#8B0000] to-[#600000]";
+            ti = "fa-heart-pulse";
+            pg = "from-[#8B0000] to-[#600000]";
             break;
           case "Training":
-            typeIcon = "fa-graduation-cap";
-            placeholderGradient = "from-[#1A5276] to-[#0A2947]";
+            ti = "fa-graduation-cap";
+            pg = "from-[#1A5276] to-[#0A2947]";
             break;
           case "Celebration":
-            typeIcon = "fa-cake-candles";
-            placeholderGradient = "from-[#FFD700] to-[#B8960C]";
+            ti = "fa-cake-candles";
+            pg = "from-[#FFD700] to-[#B8960C]";
             break;
           case "Outreach":
-            typeIcon = "fa-hand-holding-heart";
-            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+            ti = "fa-hand-holding-heart";
+            pg = "from-[#0A2947] to-[#1A5276]";
             break;
           case "Environmental":
-            typeIcon = "fa-leaf";
-            placeholderGradient = "from-[#2B0000] to-[#0A2947]";
+            ti = "fa-leaf";
+            pg = "from-[#2B0000] to-[#0A2947]";
             break;
           case "Cultural":
-            typeIcon = "fa-masks-theater";
-            placeholderGradient = "from-[#FFD700] to-[#CCAC00]";
+            ti = "fa-masks-theater";
+            pg = "from-[#FFD700] to-[#CCAC00]";
             break;
           case "Fundraising":
-            typeIcon = "fa-sack-dollar";
-            placeholderGradient = "from-[#A52A2A] to-[#800000]";
+            ti = "fa-sack-dollar";
+            pg = "from-[#A52A2A] to-[#800000]";
             break;
           default:
-            typeIcon = "fa-calendar-check";
-            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+            ti = "fa-calendar-check";
+            pg = "from-[#0A2947] to-[#1A5276]";
         }
-        const imageSection = hasImage
-          ? `<div class="relative h-40 overflow-hidden"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
-          : `<div class="relative h-40 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden"><i class="fa-solid ${typeIcon} text-white/30 text-6xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
-        let actionBtn = "";
+        const is = hi
+          ? `<div class="relative h-40 overflow-hidden"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${ti} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
+          : `<div class="relative h-40 bg-gradient-to-br ${pg} flex items-center justify-center overflow-hidden"><i class="fa-solid ${ti} text-white/30 text-6xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${ti} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
+        let ab = "";
         if (isComp)
-          actionBtn =
+          ab =
             '<span class="inline-flex items-center space-x-1.5 text-xs font-medium text-[#0A2947] bg-[#E8F0FE] px-3 py-1.5 rounded-lg border border-[#1A5276]/20 w-full justify-center pointer-events-none"><i class="fa-solid fa-circle-check text-xs"></i><span>Completed</span></span>';
         else if (isReg)
-          actionBtn = `<button type="button" onclick="handleUnregisterClick(event, '${id}','${esc(ev.title)}')" class="text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all border border-red-200 w-full relative z-10"><i class="fa-solid fa-calendar-minus mr-1.5"></i>Cancel Registration</button>`;
+          ab = `<button type="button" onclick="handleUnregisterClick(event,'${id}','${esc(ev.title)}')" class="text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all border border-red-200 w-full relative z-10"><i class="fa-solid fa-calendar-minus mr-1.5"></i>Cancel Registration</button>`;
         else
-          actionBtn = `<button type="button" onclick="handleRegisterClick(event, '${id}','${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}')" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full relative z-10"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
-        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div>${ev.createdAt ? `<p class="text-[9px] text-gray-400 mt-2 flex items-center"><i class="fa-solid fa-clock mr-1"></i>Posted ${formatRelativeTime(ev.createdAt)}</p>` : ""}</div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
+          ab = `<button type="button" onclick="handleRegisterClick(event,'${id}','${esc(ev.title)}','${dd}','${td}','${esc(ev.location)}')" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full relative z-10"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
+        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dd}','${td}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${is}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4"></i><span class="font-medium text-gray-700">${dd}</span>${td ? `<span class="text-gray-400">| ${td}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div></div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${ab}</div></div>`;
       });
       grid.innerHTML = html;
-    },
-  );
-}
-
-function renderPublicEvents() {
-  const publicGrid = document.getElementById("public-events-grid");
-  if (!publicGrid) return;
-  getDocs(query(collection(db, "events"), orderBy("date", "asc"))).then(
-    (snap) => {
-      if (snap.empty) {
-        publicGrid.innerHTML =
-          '<div class="col-span-full text-center py-10 bg-white rounded-xl border shadow-sm"><p class="text-sm text-gray-400">No upcoming events.</p></div>';
-        return;
-      }
-      let html = "";
-      snap.forEach((d) => {
-        const ev = d.data();
-        const esc = (t) => {
-          const div = document.createElement("div");
-          div.textContent = t || "";
-          return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        };
-        const dateDisplay = ev.date || "TBA",
-          timeDisplay = ev.time ? formatTimeDisplay(ev.time) : "";
-        const actionBtn = `<button type="button" onclick="promptLoginForEvent()" class="text-xs font-semibold text-[#0A2947] bg-white border border-[#0A2947] hover:bg-[#E8F0FE] px-4 py-2 rounded-lg transition-all shadow-sm flex items-center justify-center space-x-1.5 w-full relative z-10"><i class="fa-solid fa-calendar-plus text-[#0A2947]"></i><span>Register / Join</span></button>`;
-
-        let typeIcon, placeholderGradient;
-        switch (ev.type) {
-          case "Seminar":
-            typeIcon = "fa-chalkboard-user";
-            placeholderGradient = "from-[#800000] to-[#A52A2A]";
-            break;
-          case "Workshop":
-            typeIcon = "fa-toolbox";
-            placeholderGradient = "from-[#A52A2A] to-[#8B0000]";
-            break;
-          case "Meeting":
-            typeIcon = "fa-users";
-            placeholderGradient = "from-[#B8960C] to-[#8B6914]";
-            break;
-          case "Sports":
-            typeIcon = "fa-futbol";
-            placeholderGradient = "from-[#0D3B5C] to-[#0A2947]";
-            break;
-          case "Health":
-            typeIcon = "fa-heart-pulse";
-            placeholderGradient = "from-[#8B0000] to-[#600000]";
-            break;
-          case "Training":
-            typeIcon = "fa-graduation-cap";
-            placeholderGradient = "from-[#1A5276] to-[#0A2947]";
-            break;
-          case "Celebration":
-            typeIcon = "fa-cake-candles";
-            placeholderGradient = "from-[#FFD700] to-[#B8960C]";
-            break;
-          case "Outreach":
-            typeIcon = "fa-hand-holding-heart";
-            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
-            break;
-          case "Environmental":
-            typeIcon = "fa-leaf";
-            placeholderGradient = "from-[#2B0000] to-[#0A2947]";
-            break;
-          case "Cultural":
-            typeIcon = "fa-masks-theater";
-            placeholderGradient = "from-[#FFD700] to-[#CCAC00]";
-            break;
-          case "Fundraising":
-            typeIcon = "fa-sack-dollar";
-            placeholderGradient = "from-[#A52A2A] to-[#800000]";
-            break;
-          default:
-            typeIcon = "fa-calendar-check";
-            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
-        }
-
-        const hasImage = ev.imageUrl && ev.imageUrl !== "";
-        const imageSection = hasImage
-          ? `<div class="relative h-40 overflow-hidden"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
-          : `<div class="relative h-40 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden"><i class="fa-solid ${typeIcon} text-white/30 text-5xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
-
-        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${imageSection}<div class="p-4 pb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-2 leading-snug mb-2">${ev.title || "Untitled Event"}</h3><div class="space-y-2"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i><span class="font-medium text-gray-700">${dateDisplay}</span>${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}</div></div></div></div><div class="px-4 pb-4 pt-3 border-t border-gray-100 mt-auto">${actionBtn}</div></div>`;
-      });
-      publicGrid.innerHTML = html;
     },
   );
 }
@@ -2659,95 +2126,67 @@ function renderMyEvents() {
           return div.innerHTML.replace(/'/g, "\\'").replace(/"/g, "&quot;");
         };
         const isComp = completedEventIds.has(id);
-        const statusBadge = isComp
-          ? '<span class="inline-flex items-center space-x-1 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 pointer-events-none"><i class="fa-solid fa-circle-check text-[9px]"></i>Completed</span>'
-          : '<span class="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 pointer-events-none"><i class="fa-solid fa-clock text-[9px]"></i>Registered</span>';
-        const cancelBtn = !isComp
-          ? `<button type="button" onclick="handleUnregisterClick(event, '${id}','${esc(ev.title)}')" class="text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all border border-red-200 w-full mt-2 relative z-10"><i class="fa-solid fa-calendar-minus mr-1.5"></i>Cancel Registration</button>`
+        const sb = isComp
+          ? '<span class="inline-flex items-center space-x-1 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200"><i class="fa-solid fa-circle-check text-[9px]"></i>Completed</span>'
+          : '<span class="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200"><i class="fa-solid fa-clock text-[9px]"></i>Registered</span>';
+        const cb = !isComp
+          ? `<button type="button" onclick="handleUnregisterClick(event,'${id}','${esc(ev.title)}')" class="text-xs font-medium text-red-600 hover:text-white bg-red-50 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all border border-red-200 w-full mt-2 relative z-10"><i class="fa-solid fa-calendar-minus mr-1.5"></i>Cancel Registration</button>`
           : "";
-
-        let typeIcon, placeholderGradient;
+        let ti, pg;
         switch (ev.type) {
           case "Seminar":
-            typeIcon = "fa-chalkboard-user";
-            placeholderGradient = "from-[#800000] to-[#A52A2A]";
+            ti = "fa-chalkboard-user";
+            pg = "from-[#800000] to-[#A52A2A]";
             break;
           case "Workshop":
-            typeIcon = "fa-toolbox";
-            placeholderGradient = "from-[#A52A2A] to-[#8B0000]";
+            ti = "fa-toolbox";
+            pg = "from-[#A52A2A] to-[#8B0000]";
             break;
           case "Meeting":
-            typeIcon = "fa-users";
-            placeholderGradient = "from-[#B8960C] to-[#8B6914]";
+            ti = "fa-users";
+            pg = "from-[#B8960C] to-[#8B6914]";
             break;
           case "Sports":
-            typeIcon = "fa-futbol";
-            placeholderGradient = "from-[#0D3B5C] to-[#0A2947]";
+            ti = "fa-futbol";
+            pg = "from-[#0D3B5C] to-[#0A2947]";
             break;
           case "Health":
-            typeIcon = "fa-heart-pulse";
-            placeholderGradient = "from-[#8B0000] to-[#600000]";
+            ti = "fa-heart-pulse";
+            pg = "from-[#8B0000] to-[#600000]";
             break;
           case "Training":
-            typeIcon = "fa-graduation-cap";
-            placeholderGradient = "from-[#1A5276] to-[#0A2947]";
+            ti = "fa-graduation-cap";
+            pg = "from-[#1A5276] to-[#0A2947]";
             break;
           case "Celebration":
-            typeIcon = "fa-cake-candles";
-            placeholderGradient = "from-[#FFD700] to-[#B8960C]";
+            ti = "fa-cake-candles";
+            pg = "from-[#FFD700] to-[#B8960C]";
             break;
           case "Outreach":
-            typeIcon = "fa-hand-holding-heart";
-            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+            ti = "fa-hand-holding-heart";
+            pg = "from-[#0A2947] to-[#1A5276]";
             break;
           case "Environmental":
-            typeIcon = "fa-leaf";
-            placeholderGradient = "from-[#2B0000] to-[#0A2947]";
+            ti = "fa-leaf";
+            pg = "from-[#2B0000] to-[#0A2947]";
             break;
           case "Cultural":
-            typeIcon = "fa-masks-theater";
-            placeholderGradient = "from-[#FFD700] to-[#CCAC00]";
+            ti = "fa-masks-theater";
+            pg = "from-[#FFD700] to-[#CCAC00]";
             break;
           case "Fundraising":
-            typeIcon = "fa-sack-dollar";
-            placeholderGradient = "from-[#A52A2A] to-[#800000]";
+            ti = "fa-sack-dollar";
+            pg = "from-[#A52A2A] to-[#800000]";
             break;
           default:
-            typeIcon = "fa-calendar-check";
-            placeholderGradient = "from-[#0A2947] to-[#1A5276]";
+            ti = "fa-calendar-check";
+            pg = "from-[#0A2947] to-[#1A5276]";
         }
-
-        const hasImage = ev.imageUrl && ev.imageUrl !== "";
-        const imageSection = hasImage
-          ? `<div class="relative h-40 overflow-hidden rounded-t-xl"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 pointer-events-none"><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
-          : `<div class="relative h-40 bg-gradient-to-br ${placeholderGradient} flex items-center justify-center overflow-hidden rounded-t-xl"><i class="fa-solid ${typeIcon} text-white/30 text-5xl pointer-events-none"></i><div class="absolute top-3 left-3"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2.5 py-1 rounded-full pointer-events-none"><i class="fa-solid ${typeIcon} text-[#FFD700] text-[10px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
-
-        const dateDisplay = ev.date || "TBA";
-        const timeDisplay = ev.time ? formatTimeDisplay(ev.time) : "";
-
-        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col group">
-          <div onclick="openEventDetails('${esc(ev.title)}','${dateDisplay}','${timeDisplay}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer">
-            ${imageSection}
-            <div class="p-4 pb-2">
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-bold text-gray-900 line-clamp-1 flex-1 mr-2 group-hover:text-[#800000] transition-colors">${ev.title || "Untitled Event"}</h3>
-                ${statusBadge}
-              </div>
-              <div class="space-y-1.5">
-                <div class="flex items-center space-x-1.5 text-xs text-gray-500">
-                  <i class="fa-solid fa-calendar text-[#B8960C] w-4 text-center"></i>
-                  <span class="font-medium text-gray-700">${dateDisplay}</span>
-                  ${timeDisplay ? `<span class="text-gray-400">| ${timeDisplay}</span>` : ""}
-                </div>
-                <div class="flex items-center space-x-1.5 text-xs text-gray-500">
-                  <i class="fa-solid fa-location-dot text-[#B8960C] w-4 text-center"></i>
-                  <span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          ${cancelBtn ? `<div class="px-4 pb-4 pt-1 border-t border-gray-100">${cancelBtn}</div>` : `<div class="px-4 pb-4 pt-2"></div>`}
-        </div>`;
+        const hi = ev.imageUrl && ev.imageUrl !== "";
+        const is = hi
+          ? `<div class="relative h-32 overflow-hidden"><img src="${ev.imageUrl}" alt="${esc(ev.title)}" class="w-full h-full object-cover pointer-events-none"><div class="absolute top-2 left-2"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full"><i class="fa-solid ${ti} text-[#FFD700] text-[9px]"></i><span>${ev.type || "Event"}</span></span></div></div>`
+          : `<div class="relative h-32 bg-gradient-to-br ${pg} flex items-center justify-center overflow-hidden"><i class="fa-solid ${ti} text-white/30 text-5xl"></i><div class="absolute top-2 left-2"><span class="inline-flex items-center space-x-1 text-[10px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full"><i class="fa-solid ${ti} text-[#FFD700] text-[9px]"></i><span>${ev.type || "Event"}</span></span></div></div>`;
+        html += `<div class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col"><div onclick="openEventDetails('${esc(ev.title)}','${ev.date || "TBA"}','${ev.time ? formatTimeDisplay(ev.time) : ""}','${esc(ev.location)}','${esc(ev.desc || "")}')" class="cursor-pointer group">${is}<div class="p-4 pb-2"><div class="flex items-center justify-between mb-2"><h3 class="text-sm font-bold text-gray-900 group-hover:text-[#800000] transition-colors line-clamp-1 leading-snug flex-1 mr-2">${ev.title || "Untitled Event"}</h3>${sb}</div><div class="space-y-1.5"><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-calendar text-[#B8960C] w-4"></i><span class="font-medium text-gray-700">${ev.date || "TBA"}</span>${ev.time ? `<span class="text-gray-400">| ${formatTimeDisplay(ev.time)}</span>` : ""}</div><div class="flex items-center space-x-1.5 text-xs text-gray-500"><i class="fa-solid fa-location-dot text-[#B8960C] w-4"></i><span class="font-medium text-gray-700 truncate">${ev.location || "TBA"}</span></div></div></div></div>${cb ? `<div class="px-4 pb-4">${cb}</div>` : ""}</div>`;
       });
       grid.innerHTML = found
         ? html
@@ -2757,37 +2196,31 @@ function renderMyEvents() {
 }
 
 // ===== EVENT OPERATIONS =====
-window.confirmJoinEvent = function (
-  eventId,
-  eventTitle,
-  eventDate,
-  eventTime,
-  eventLocation,
-) {
+window.confirmJoinEvent = function (eid, et, ed, etm, el) {
   if (!loggedInUser) {
     window.showAlert("Error", "Please login.", "error");
     return;
   }
-  if (registeredEventIds.has(eventId) || completedEventIds.has(eventId)) {
+  if (registeredEventIds.has(eid) || completedEventIds.has(eid)) {
     window.showAlert("Already Registered", "", "error");
     return;
   }
-  let msg = `Join: "${eventTitle}"?`;
-  if (eventDate) msg += `\nDate: ${eventDate}`;
-  if (eventTime) msg += `\nTime: ${eventTime}`;
-  if (eventLocation) msg += `\nLocation: ${eventLocation}`;
+  let msg = `Join: "${et}"?`;
+  if (ed) msg += `\nDate: ${ed}`;
+  if (etm) msg += `\nTime: ${etm}`;
+  if (el) msg += `\nLocation: ${el}`;
   window.showConfirmPopup("Join Event?", msg, async () => {
-    await performJoinEvent(eventId, eventTitle);
+    await performJoinEvent(eid, et);
   });
 };
-async function performJoinEvent(eventId, eventTitle) {
+async function performJoinEvent(eid, et) {
   showLoading("Joining...");
   try {
     const snap = await getDocs(
       query(
         collection(db, "participants"),
         where("residentId", "==", loggedInUser.id),
-        where("eventId", "==", eventId),
+        where("eventId", "==", eid),
         limit(1),
       ),
     );
@@ -2810,12 +2243,12 @@ async function performJoinEvent(eventId, eventTitle) {
       residentId: loggedInUser.id,
       residentName: loggedInUser.name,
       residentEmail: loggedInUser.email,
-      eventTitle,
-      eventId,
+      eventTitle: et,
+      eventId: eid,
       timestamp: serverTimestamp(),
       status: STATUS.REGISTERED,
     });
-    registeredEventIds.add(eventId);
+    registeredEventIds.add(eid);
     sessionStorage.setItem(
       "registeredEvents",
       JSON.stringify([...registeredEventIds]),
@@ -2823,56 +2256,52 @@ async function performJoinEvent(eventId, eventTitle) {
     renderEvents();
     renderMyEvents();
     hideLoading();
-    window.showAlert("Success!", `Registered for "${eventTitle}".`, "success");
+    window.showAlert("Success!", `Registered for "${et}".`, "success");
   } catch (e) {
     hideLoading();
     window.showAlert("Error", "Failed to register.", "error");
   }
 }
-window.unregisterFromEvent = function (eventId, eventTitle) {
+window.unregisterFromEvent = function (eid, et) {
   if (!loggedInUser) return;
-  window.showConfirmPopup(
-    "Cancel?",
-    `Unregister from "${eventTitle}"?`,
-    async () => {
-      showLoading("Cancelling...");
-      try {
-        const snap = await getDocs(
-          query(
-            collection(db, "participants"),
-            where("residentId", "==", loggedInUser.id),
-            where("eventId", "==", eventId),
-            where("status", "==", STATUS.REGISTERED),
-            limit(1),
+  window.showConfirmPopup("Cancel?", `Unregister from "${et}"?`, async () => {
+    showLoading("Cancelling...");
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, "participants"),
+          where("residentId", "==", loggedInUser.id),
+          where("eventId", "==", eid),
+          where("status", "==", STATUS.REGISTERED),
+          limit(1),
+        ),
+      );
+      if (!snap.empty) {
+        const p = [];
+        snap.forEach((d) =>
+          p.push(
+            updateDoc(doc(db, "participants", d.id), {
+              status: STATUS.CANCELLED,
+              cancelledAt: serverTimestamp(),
+            }),
           ),
         );
-        if (!snap.empty) {
-          const p = [];
-          snap.forEach((d) =>
-            p.push(
-              updateDoc(doc(db, "participants", d.id), {
-                status: STATUS.CANCELLED,
-                cancelledAt: serverTimestamp(),
-              }),
-            ),
-          );
-          await Promise.all(p);
-        }
-        registeredEventIds.delete(eventId);
-        sessionStorage.setItem(
-          "registeredEvents",
-          JSON.stringify([...registeredEventIds]),
-        );
-        renderEvents();
-        renderMyEvents();
-        hideLoading();
-        window.showAlert("Cancelled", `Unregistered.`, "success");
-      } catch (e) {
-        hideLoading();
-        window.showAlert("Error", "Failed.", "error");
+        await Promise.all(p);
       }
-    },
-  );
+      registeredEventIds.delete(eid);
+      sessionStorage.setItem(
+        "registeredEvents",
+        JSON.stringify([...registeredEventIds]),
+      );
+      renderEvents();
+      renderMyEvents();
+      hideLoading();
+      window.showAlert("Cancelled", "Unregistered.", "success");
+    } catch (e) {
+      hideLoading();
+      window.showAlert("Error", "Failed.", "error");
+    }
+  });
 };
 eventsUnsubscribe = onSnapshot(
   query(collection(db, "events"), orderBy("date", "asc")),
@@ -2882,7 +2311,7 @@ eventsUnsubscribe = onSnapshot(
   },
 );
 
-// ===== DONATIONS, HOURS, VOLUNTEERS =====
+// ===== DONATIONS & HOURS =====
 onSnapshot(
   query(collection(db, "donations"), orderBy("createdAt", "desc")),
   (snap) => {
@@ -2897,27 +2326,6 @@ onSnapshot(
     tbody.innerHTML =
       html ||
       '<tr><td colspan="3" class="text-center py-4 text-xs text-gray-400">No confirmed donations yet.</td></tr>';
-  },
-);
-onSnapshot(
-  query(collection(db, "service_hours"), orderBy("hours", "desc")),
-  (snap) => {
-    const tbody = document.getElementById("public-hours-tbody");
-    if (!tbody) return;
-    let html = "",
-      rank = 1;
-    snap.forEach((d) => {
-      const data = d.data();
-      if (data.status === STATUS.APPROVED) {
-        let medal =
-          rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "";
-        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${rank}</td><td class="px-3 py-2 font-bold text-xs">${medal} ${data.residentName || "Volunteer"}</td><td class="px-3 py-2 text-xs">${data.hours || 0} hrs</td></tr>`;
-        rank++;
-      }
-    });
-    tbody.innerHTML =
-      html ||
-      '<tr><td colspan="3" class="text-center py-4 text-xs text-gray-400">No volunteers listed.</td></tr>';
   },
 );
 function initUserHourTracker() {
@@ -2938,13 +2346,13 @@ function initUserHourTracker() {
         const data = d.data();
         if (data.status === STATUS.APPROVED)
           total += parseFloat(data.hours || 0);
-        let statusBadge =
+        let badge =
           data.status === STATUS.APPROVED
             ? '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-emerald-100 text-emerald-800">✓ Approved</span>'
             : data.status === STATUS.REJECTED
               ? '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-red-100 text-red-800">✗ Rejected</span>'
               : '<span class="text-[10px] rounded-full px-2 py-0.5 font-bold bg-amber-100 text-amber-800">Pending</span>';
-        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.eventTitle || "Community Service"}</td><td class="px-3 py-2 text-xs font-bold">${data.hours || 0} hrs</td><td class="px-10 py-2">${statusBadge}</td></tr>`;
+        html += `<tr class="border-b"><td class="px-3 py-2 text-xs">${data.eventTitle || "Community Service"}</td><td class="px-3 py-2 text-xs font-bold">${data.hours || 0} hrs</td><td class="px-3 py-2">${badge}</td></tr>`;
       });
       tbody.innerHTML =
         html ||
@@ -2953,6 +2361,8 @@ function initUserHourTracker() {
     },
   );
 }
+
+// ===== VOLUNTEER FORM =====
 document
   .getElementById("volunteer-form")
   ?.addEventListener("submit", async (e) => {
@@ -2966,40 +2376,34 @@ document
       experience = document.getElementById("vol-experience")?.value || "",
       notes = document.getElementById("vol-notes")?.value.trim() || "";
     if (!skills) {
-      window.showAlert("Error", "Please select your primary skill.", "error");
+      window.showAlert("Error", "Select your primary skill.", "error");
       return;
     }
     if (!availability) {
-      window.showAlert("Error", "Please select your availability.", "error");
+      window.showAlert("Error", "Select your availability.", "error");
       return;
     }
     if (!selectedSkillVerificationFile) {
-      window.showAlert(
-        "Error",
-        "Please upload a certificate or proof of your skill.",
-        "error",
-      );
+      window.showAlert("Error", "Upload proof of your skill.", "error");
       return;
     }
-    showLoading("Submitting application...");
+    showLoading("Submitting...");
     try {
-      let verificationData = null;
+      let vd = null;
       if (selectedSkillVerificationFile)
-        verificationData = await convertFileToBase64(
-          selectedSkillVerificationFile,
-        );
+        vd = await convertFileToBase64(selectedSkillVerificationFile);
       await addDoc(collection(db, "volunteers"), {
         residentId: loggedInUser.id,
         name: loggedInUser.name,
         email: loggedInUser.email,
         skills,
         experience,
-        verificationFile: verificationData
+        verificationFile: vd
           ? {
               fileName: selectedSkillVerificationFile.name,
               fileType: selectedSkillVerificationFile.type,
               fileSize: selectedSkillVerificationFile.size,
-              data: verificationData,
+              data: vd,
               uploadedAt: new Date().toISOString(),
             }
           : null,
@@ -3018,7 +2422,7 @@ document
       );
     } catch (err) {
       hideLoading();
-      window.showAlert("Error", "Failed to submit application.", "error");
+      window.showAlert("Error", "Failed to submit.", "error");
     }
   });
 window.handleSkillVerificationUpload = function (event) {
@@ -3038,42 +2442,41 @@ window.handleSkillVerificationUpload = function (event) {
     return;
   }
   if (file.size > 5 * 1024 * 1024) {
-    window.showAlert("Error", "File size must be less than 5MB.", "error");
+    window.showAlert("Error", "File < 5MB.", "error");
     event.target.value = "";
     return;
   }
   selectedSkillVerificationFile = file;
-  const placeholder = document.getElementById("skill-upload-placeholder"),
-    preview = document.getElementById("skill-upload-preview"),
-    fileName = document.getElementById("skill-file-name"),
-    fileSize = document.getElementById("skill-file-size"),
-    dropzone = document.getElementById("skill-verification-dropzone");
-  if (placeholder) placeholder.classList.add("hidden");
-  if (preview) preview.classList.remove("hidden");
-  if (fileName) fileName.textContent = file.name;
-  if (fileSize) {
-    const sizeKB = (file.size / 1024).toFixed(1),
-      sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-    fileSize.textContent =
-      file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+  const ph = document.getElementById("skill-upload-placeholder"),
+    pv = document.getElementById("skill-upload-preview"),
+    fn = document.getElementById("skill-file-name"),
+    fs = document.getElementById("skill-file-size"),
+    dz = document.getElementById("skill-verification-dropzone");
+  if (ph) ph.classList.add("hidden");
+  if (pv) pv.classList.remove("hidden");
+  if (fn) fn.textContent = file.name;
+  if (fs) {
+    const sk = (file.size / 1024).toFixed(1),
+      sm = (file.size / (1024 * 1024)).toFixed(1);
+    fs.textContent = file.size > 1024 * 1024 ? `${sm} MB` : `${sk} KB`;
   }
-  if (dropzone) {
-    dropzone.classList.add("border-emerald-500", "bg-emerald-50");
-    dropzone.classList.remove("border-gray-300");
+  if (dz) {
+    dz.classList.add("border-emerald-500", "bg-emerald-50");
+    dz.classList.remove("border-gray-300");
   }
 };
 window.removeSkillVerification = function () {
   selectedSkillVerificationFile = null;
-  const input = document.getElementById("skill-verification-input"),
-    placeholder = document.getElementById("skill-upload-placeholder"),
-    preview = document.getElementById("skill-upload-preview"),
-    dropzone = document.getElementById("skill-verification-dropzone");
-  if (input) input.value = "";
-  if (placeholder) placeholder.classList.remove("hidden");
-  if (preview) preview.classList.add("hidden");
-  if (dropzone) {
-    dropzone.classList.remove("border-emerald-500", "bg-emerald-50");
-    dropzone.classList.add("border-gray-300");
+  const inp = document.getElementById("skill-verification-input"),
+    ph = document.getElementById("skill-upload-placeholder"),
+    pv = document.getElementById("skill-upload-preview"),
+    dz = document.getElementById("skill-verification-dropzone");
+  if (inp) inp.value = "";
+  if (ph) ph.classList.remove("hidden");
+  if (pv) pv.classList.add("hidden");
+  if (dz) {
+    dz.classList.remove("border-emerald-500", "bg-emerald-50");
+    dz.classList.add("border-gray-300");
   }
 };
 function convertFileToBase64(file) {
@@ -3084,6 +2487,8 @@ function convertFileToBase64(file) {
     reader.readAsDataURL(file);
   });
 }
+
+// ===== DONATION FORM =====
 document
   .getElementById("donation-form")
   ?.addEventListener("submit", async (e) => {
@@ -3103,6 +2508,18 @@ document
 
 // ===== TAB SWITCHER =====
 window.switchTab = function (tabId) {
+  closeAllHeaderDropdowns();
+  closeMobileMenu();
+  const nd = document.getElementById("notification-dropdown");
+  if (nd && !nd.classList.contains("hidden")) {
+    nd.classList.add("hidden");
+    showingAllNotifications = false;
+  }
+  const mnd = document.getElementById("mobile-notification-dropdown");
+  if (mnd && !mnd.classList.contains("hidden")) {
+    mnd.classList.add("hidden");
+    mobileShowingAllNotifications = false;
+  }
   if (isTabSwitching) return;
   isTabSwitching = true;
   showLoading("Loading...");
@@ -3127,8 +2544,7 @@ window.switchTab = function (tabId) {
     if (tabId === "profile" && loggedInUser) {
       setTimeout(() => {
         disableAllProfileFields();
-        const cb = document.getElementById("cancel-edit-btn");
-        if (cb) cb.classList.add("hidden");
+        document.getElementById("cancel-edit-btn")?.classList.add("hidden");
       }, 100);
     }
     setTimeout(() => {
@@ -3156,75 +2572,54 @@ window.toggleModal = function (modalId) {
   if (modal) modal.classList.toggle("hidden");
 };
 
-// ===== PRIVACY POLICY LOADING =====
-function handlePrivacyPolicyClick(event) {
-  event.preventDefault();
-  const overlay = document.getElementById("page-loading-overlay");
-  const href = event.currentTarget.getAttribute("href");
-  overlay.classList.add("active");
-  const minLoadTime = 2000;
-  const startTime = Date.now();
-  const link = document.createElement("link");
-  link.rel = "prefetch";
-  link.href = href;
-  document.head.appendChild(link);
-  function navigateToPrivacy() {
-    const elapsed = Date.now() - startTime;
-    const remaining = Math.max(0, minLoadTime - elapsed);
-    setTimeout(() => {
-      window.location.href = href;
-    }, remaining);
-  }
-  navigateToPrivacy();
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-  const privacyLinks = document.querySelectorAll(
-    'a[href="privacy-policy.html"]',
-  );
-  privacyLinks.forEach((link) => {
-    link.addEventListener("click", handlePrivacyPolicyClick);
-  });
-  document.addEventListener("click", function (e) {
-    const privacyLink = e.target.closest('a[href="privacy-policy.html"]');
-    if (privacyLink && !privacyLink.hasAttribute("data-listener-attached")) {
-      e.preventDefault();
-      privacyLink.setAttribute("data-listener-attached", "true");
-      handlePrivacyPolicyClick(e);
-    }
-  });
-});
-
-window.addEventListener("pageshow", function (event) {
-  const overlay = document.getElementById("page-loading-overlay");
-  if (overlay && event.persisted) overlay.classList.remove("active");
-});
-
-window.addEventListener("load", function () {
-  const overlay = document.getElementById("page-loading-overlay");
-  if (overlay)
-    setTimeout(() => {
-      overlay.classList.remove("active");
-    }, 300);
-
-  // Check if returning from PayMongo payment
-  const urlParams = new URLSearchParams(window.location.search);
-  const paymentIntentId = urlParams.get("payment_intent_id");
-
-  if (paymentIntentId) {
-    verifyPaymentOnReturn(paymentIntentId);
-  }
-});
-
 // ===== INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", () => {
   setupPhoneRestrictions();
   hideNotificationBell();
+  renderPublicEvents();
+  closeAllHeaderDropdowns();
+
+  document.addEventListener("click", function (e) {
+    const triggers = document.querySelectorAll(".header-dropdown-trigger");
+    let inside = false;
+    triggers.forEach((t) => {
+      if (t.contains(e.target)) inside = true;
+    });
+    if (!inside) closeAllHeaderDropdowns();
+    const tBtn = e.target.closest(".header-dropdown-trigger > button");
+    if (tBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const p = tBtn.parentElement,
+        d = p.querySelector(".header-dropdown");
+      const isOpen = d && d.classList.contains("show");
+      closeAllHeaderDropdowns();
+      if (d && !isOpen) d.classList.add("show");
+    }
+    const dLink = e.target.closest(".header-dropdown button");
+    if (dLink) setTimeout(() => closeAllHeaderDropdowns(), 100);
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      closeAllHeaderDropdowns();
+      closeMobileMenu();
+      const nd = document.getElementById("notification-dropdown");
+      if (nd && !nd.classList.contains("hidden")) {
+        nd.classList.add("hidden");
+        showingAllNotifications = false;
+      }
+      window.closeNotificationDetail();
+    }
+  });
+  document
+    .getElementById("notification-detail-modal")
+    ?.addEventListener("click", function (e) {
+      if (e.target === this) window.closeNotificationDetail();
+    });
+
   const mobileOverlay = document.getElementById("mobile-overlay");
   if (mobileOverlay)
-    mobileOverlay.addEventListener("click", () => {
-      window.toggleMobileMenu();
-    });
+    mobileOverlay.addEventListener("click", () => window.toggleMobileMenu());
   document.querySelectorAll(".nav-link").forEach((link) => {
     link.addEventListener("click", () => {
       const sidebar = document.getElementById("sidebar");
@@ -3246,6 +2641,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.body.style.overflow = "";
     }
   });
+
   showLoading("Securing session...");
   onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -3264,16 +2660,16 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const snap = await getDoc(doc(db, "residents", user.uid));
         if (snap.exists()) {
-          const userData = snap.data();
-          const savedSession = localStorage.getItem("barangayUser");
-          if (savedSession) {
+          const ud = snap.data();
+          const ss = localStorage.getItem("barangayUser");
+          if (ss) {
             try {
-              const parsedSession = JSON.parse(savedSession);
-              if (!currentSessionToken && userData.sessionToken)
-                currentSessionToken = userData.sessionToken;
+              const ps = JSON.parse(ss);
+              if (!currentSessionToken && ud.sessionToken)
+                currentSessionToken = ud.sessionToken;
             } catch (e) {}
           }
-          loggedInUser = { id: snap.id, ...userData };
+          loggedInUser = { id: snap.id, ...ud };
           saveUserSession(loggedInUser);
           const se = sessionStorage.getItem("registeredEvents");
           if (se)
@@ -3318,6 +2714,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("auth-screen")?.classList.remove("hidden");
       document.getElementById("dashboard")?.classList.add("hidden");
       hideNotificationBell();
+      renderPublicEvents();
       hideLoading();
     }
   });
@@ -3341,40 +2738,8 @@ window.addEventListener("beforeunload", () => {
   if (volunteersUnsubscribe) volunteersUnsubscribe();
   if (hoursUnsubscribe) hoursUnsubscribe();
 });
-document.addEventListener("click", function (event) {
-  const sidebar = document.getElementById("sidebar"),
-    mobileMenuBtn = document.getElementById("mobile-menu-btn"),
-    isMobile = window.innerWidth < 1024;
-  if (!isMobile || !sidebar) return;
-  const isOpen = sidebar.classList.contains("translate-x-0");
-  if (isOpen) {
-    const clickedInsideSidebar = sidebar.contains(event.target),
-      clickedMenuButton = mobileMenuBtn && mobileMenuBtn.contains(event.target);
-    if (!clickedInsideSidebar && !clickedMenuButton) {
-      sidebar.classList.remove("translate-x-0");
-      sidebar.classList.add("-translate-x-full");
-      const overlay = document.getElementById("mobile-overlay");
-      if (overlay) overlay.classList.add("hidden");
-      document.body.style.overflow = "";
-    }
-  }
-});
-window.addEventListener("resize", function () {
-  if (window.innerWidth >= 1024) {
-    const sidebar = document.getElementById("sidebar"),
-      overlay = document.getElementById("mobile-overlay");
-    if (sidebar) {
-      sidebar.classList.remove("-translate-x-full");
-      sidebar.classList.add("translate-x-0");
-    }
-    if (overlay) overlay.classList.add("hidden");
-    document.body.style.overflow = "";
-  }
-});
 
-// ===== EXPORT GLOBALS =====
-window.showLoading = showLoading;
-window.hideLoading = hideLoading;
+// ===== LOGOUT =====
 window.triggerLogoutConfirmation = function () {
   window.showConfirmPopup("Log Out", "Are you sure?", async () => {
     showLoading("Logging out...");
@@ -3393,23 +2758,15 @@ window.triggerLogoutConfirmation = function () {
     clearUserSession();
     loggedInUser = null;
     currentSessionToken = null;
-    const loginForm = document.getElementById("login-form"),
-      registerForm = document.getElementById("register-form");
-    if (loginForm) loginForm.reset();
-    if (registerForm) registerForm.reset();
+    document.getElementById("login-form")?.reset();
+    document.getElementById("register-form")?.reset();
     document.getElementById("login-panel")?.classList.remove("hidden");
     document.getElementById("register-panel")?.classList.add("hidden");
     document.getElementById("auth-screen")?.classList.remove("hidden");
     document.getElementById("dashboard")?.classList.add("hidden");
     hideNotificationBell();
-    const sidebar = document.getElementById("sidebar"),
-      overlay = document.getElementById("mobile-overlay");
-    if (sidebar && sidebar.classList.contains("translate-x-0")) {
-      sidebar.classList.remove("translate-x-0");
-      sidebar.classList.add("-translate-x-full");
-      if (overlay) overlay.classList.add("hidden");
-      document.body.style.overflow = "";
-    }
+    renderPublicEvents();
+    closeMobileMenu();
     if (alertTimeout) clearTimeout(alertTimeout);
     if (participantsUnsubscribe) participantsUnsubscribe();
     if (notificationsUnsubscribe) notificationsUnsubscribe();
@@ -3421,30 +2778,28 @@ window.triggerLogoutConfirmation = function () {
   });
 };
 function showLogoutBanner() {
-  const existingBanner = document.getElementById("logout-banner");
-  if (existingBanner) existingBanner.remove();
-  const banner = document.createElement("div");
-  banner.id = "logout-banner";
-  banner.className =
+  const eb = document.getElementById("logout-banner");
+  if (eb) eb.remove();
+  const b = document.createElement("div");
+  b.id = "logout-banner";
+  b.className =
     "fixed top-0 left-0 right-0 z-[300] transform -translate-y-full transition-transform duration-500 ease-in-out";
-  banner.innerHTML = `<div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-4 shadow-2xl"><div class="max-w-4xl mx-auto flex items-center justify-between"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"><i class="fa-solid fa-circle-check text-white text-lg"></i></div><div><h3 class="font-extrabold text-sm">Successfully Logged Out</h3><p class="text-xs text-emerald-100 mt-0.5">You have been securely signed out of your account.</p></div></div><button onclick="closeLogoutBanner()" class="text-white/80 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-sm"></i></button></div></div>`;
-  document.body.appendChild(banner);
+  b.innerHTML = `<div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-4 shadow-2xl"><div class="max-w-4xl mx-auto flex items-center justify-between"><div class="flex items-center space-x-3"><div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"><i class="fa-solid fa-circle-check text-white text-lg"></i></div><div><h3 class="font-extrabold text-sm">Successfully Logged Out</h3><p class="text-xs text-emerald-100 mt-0.5">You have been securely signed out.</p></div></div><button onclick="closeLogoutBanner()" class="text-white/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark text-sm"></i></button></div></div>`;
+  document.body.appendChild(b);
   setTimeout(() => {
-    banner.classList.remove("-translate-y-full");
-    banner.classList.add("translate-y-0");
+    b.classList.remove("-translate-y-full");
+    b.classList.add("translate-y-0");
   }, 100);
   setTimeout(() => {
     closeLogoutBanner();
   }, 7000);
 }
 window.closeLogoutBanner = function () {
-  const banner = document.getElementById("logout-banner");
-  if (banner) {
-    banner.classList.add("-translate-y-full");
-    banner.classList.remove("translate-y-0");
-    setTimeout(() => {
-      banner.remove();
-    }, 500);
+  const b = document.getElementById("logout-banner");
+  if (b) {
+    b.classList.add("-translate-y-full");
+    b.classList.remove("translate-y-0");
+    setTimeout(() => b.remove(), 500);
   }
 };
 document
@@ -3452,7 +2807,6 @@ document
   ?.addEventListener("click", function () {
     currentDonationData = null;
     selectedPaymentMethod = null;
-    currentPaymentIntentId = null;
     document.getElementById("payment-form")?.reset();
     document
       .querySelectorAll(".payment-method-btn")
@@ -3467,7 +2821,6 @@ document
     if (e.target === this) {
       currentDonationData = null;
       selectedPaymentMethod = null;
-      currentPaymentIntentId = null;
       document.getElementById("payment-form")?.reset();
       document
         .querySelectorAll(".payment-method-btn")
@@ -3478,7 +2831,16 @@ document
     }
   });
 
-// Global function exports
+// ===== EXPORT GLOBALS =====
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+window.showPage = window.showPage;
+window.closePage = window.closePage;
+window.openMobileMenu = openMobileMenu;
+window.closeMobileMenu = closeMobileMenu;
+window.openNotificationDetail = window.openNotificationDetail;
+window.closeNotificationDetail = window.closeNotificationDetail;
+window.clearAllNotifications = window.clearAllNotifications;
 window.joinEvent = window.confirmJoinEvent;
 window.confirmJoinEvent = window.confirmJoinEvent;
 window.performJoinEvent = performJoinEvent;
@@ -3497,7 +2859,6 @@ window.saveProfileChanges = window.saveProfileChanges;
 window.openAnnouncementDetails = window.openAnnouncementDetails;
 window.handleRegisterClick = window.handleRegisterClick;
 window.handleUnregisterClick = window.handleUnregisterClick;
-window.promptLoginForEvent = window.promptLoginForEvent;
 window.handleSkillVerificationUpload = window.handleSkillVerificationUpload;
 window.removeSkillVerification = window.removeSkillVerification;
 window.toggleNotificationDropdown = window.toggleNotificationDropdown;
